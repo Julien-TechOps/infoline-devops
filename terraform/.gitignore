@@ -1,0 +1,9 @@
+# Dossier provider téléchargé localement
+.terraform/
+
+# State Terraform — ne jamais versionner
+*.tfstate
+*.tfstate.backup
+
+# Plan sauvegardé
+tfplan
