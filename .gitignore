@@ -1,0 +1,15 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+tfplan
+
+# Node / Angular
+node_modules/
+dist/
+
+# Docker
+*.env
+
+# OS
+.DS_Store
