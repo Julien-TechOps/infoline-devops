@@ -32,8 +32,27 @@ Terraform (IaC). Dépôt final le 23 juillet 2026.
 4. Ajouter 2-3 lignes dans `architecture.md`, même courtes.
 5. Mettre à jour les statuts de la phase en cours dans `doc_project/backlog.md`.
 
+## Questions ECF et correspondance phases
+
+Texte complet dans `doc_project/sujet_ECF.md`. Correspondance rapide :
+
+| Question | Intitulé | Phase projet |
+|---|---|---|
+| A1-Q1 (1/2) | Cluster Kubernetes en IaC (EKS + Terraform) | Phase 1 — EKS |
+| A1-Q1 (2/2) | Serverless Lambda en IaC | Phase 1 — Lambda |
+| A2-Q1 | Spring Boot hello world exposé sur un port | Phase 2 — Spring Boot |
+| A2-Q2 | Dockerisation Spring Boot | Phase 2 — Spring Boot |
+| A2-Q3 | CI/CD build/test/deploy Spring Boot → EKS | Phase 3 — CI/CD |
+| A2-Q4 | Angular hello world | Phase 2 — Angular |
+| A2-Q5 | CI/CD build/test Angular (CircleCI) | Phase 3 — CI/CD |
+| A3-Q1 | Elasticsearch connecté à Kubernetes | Phase 4 — ELK |
+| A3-Q2 | Kibana + exemples de queries sur logs | Phase 4 — ELK |
+
+Nommer chaque capture selon la question : `A2-Q2_dockerfile.png`, `A3-Q1_elasticsearch-pod.png`, etc.
+
 ## Fichiers de référence
-- `doc_project/backlog.md` — source de vérité de l'avancement par phase.
+- `doc_project/backlog.md` — source de vérité de l'avancement par phase (colonne Question ECF incluse).
+- `doc_project/sujet_ECF.md` — texte complet du sujet d'examen + table de correspondance.
 - `doc_project/FRICTIONS.md` — journal chronologique, une entrée par session.
 - `architecture.md` — le "pourquoi" de chaque choix technique (réutilisable telle
   quelle dans la doc technique finale).
