@@ -5,7 +5,7 @@ module.vpc.aws_vpc.this[0]: Creating...
 module.eks.aws_iam_role.this[0]: Creating...
 module.eks.aws_cloudwatch_log_group.this[0]: Creating...
 module.eks.aws_cloudwatch_log_group.this[0]: Creation complete after 2s [id=/aws/eks/infoline-eks/cluster]
-module.eks.aws_iam_policy.custom[0]: Creation complete after 8s [id=arn:aws:iam::247898554480:policy/infoline-eks-cluster-20260701053412151400000003]
+module.eks.aws_iam_policy.custom[0]: Creation complete after 8s [id=arn:aws:iam::<ACCOUNT_ID>:policy/infoline-eks-cluster-20260701053412151400000003]
 module.eks.aws_iam_role.this[0]: Creation complete after 3s [id=infoline-eks-cluster-20260701053412150500000001]
 module.eks.module.eks_managed_node_group["main"].aws_iam_role.this[0]: Creation complete after 3s [id=main-eks-node-group-20260701053412150700000002]
 module.eks.aws_iam_role_policy_attachment.this["AmazonEKSVPCResourceController"]: Creating...
@@ -51,7 +51,7 @@ module.vpc.aws_route_table_association.private[1]: Creating...
 module.vpc.aws_route_table_association.private[0]: Creating...
 module.vpc.aws_subnet.public[1]: Creation complete after 1s [id=subnet-0d139ab8b49aeb934]
 module.vpc.aws_route_table_association.public[1]: Creating...
-module.vpc.aws_default_security_group.this[0]: Creation complete after 3s [id=sg-0793937940500f167]
+module.vpc.aws_default_security_group.this[0]: Creation complete after 3s [id=<SG_DEFAULT_ID>]
 module.vpc.aws_route_table_association.public[0]: Creating...
 module.vpc.aws_eip.nat[0]: Creation complete after 1s [id=eipalloc-090ee45cb0ed9d015]
 module.vpc.aws_nat_gateway.this[0]: Creating...
@@ -89,7 +89,7 @@ module.eks.module.kms.aws_kms_alias.this["cluster"]: Creating...
 module.eks.aws_iam_policy.cluster_encryption[0]: Creating...
 module.eks.module.kms.aws_kms_alias.this["cluster"]: Creation complete after 0s [id=alias/eks/infoline-eks]
 module.eks.aws_security_group_rule.node["ingress_self_coredns_udp"]: Creation complete after 9s [id=sgrule-2843215418]
-module.eks.aws_iam_policy.cluster_encryption[0]: Creation complete after 1s [id=arn:aws:iam::247898554480:policy/infoline-eks-cluster-ClusterEncryption2026070105343969350000000f]
+module.eks.aws_iam_policy.cluster_encryption[0]: Creation complete after 1s [id=arn:aws:iam::<ACCOUNT_ID>:policy/infoline-eks-cluster-ClusterEncryption2026070105343969350000000f]
 module.eks.aws_iam_role_policy_attachment.cluster_encryption[0]: Creating...
 module.eks.aws_security_group_rule.node["ingress_cluster_8443_webhook"]: Still creating... [00m09s elapsed]
 module.eks.aws_iam_role_policy_attachment.cluster_encryption[0]: Creation complete after 1s [id=infoline-eks-cluster-20260701053412150500000001-20260701053441588300000010]
@@ -164,10 +164,10 @@ module.eks.data.tls_certificate.this[0]: Reading...
 module.eks.time_sleep.this[0]: Creating...
 module.eks.data.tls_certificate.this[0]: Read complete after 1s [id=a6171d3110f6e4425c2a1a58f235b2f131b510af]
 module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Creating...
-module.eks.aws_eks_access_entry.this["cluster_creator"]: Creation complete after 2s [id=infoline-eks:arn:aws:iam::247898554480:user/terraform-ecf]
+module.eks.aws_eks_access_entry.this["cluster_creator"]: Creation complete after 2s [id=infoline-eks:arn:aws:iam::<ACCOUNT_ID>:user/<IAM_USER>]
 module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Creating...
-module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Creation complete after 1s [id=infoline-eks#arn:aws:iam::247898554480:user/terraform-ecf#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy]
-module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Creation complete after 3s [id=arn:aws:iam::247898554480:oidc-provider/oidc.eks.eu-west-3.amazonaws.com/id/086027233DA6E5BFC3FBEC7C448E57AA]
+module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Creation complete after 1s [id=infoline-eks#arn:aws:iam::<ACCOUNT_ID>:user/<IAM_USER>#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy]
+module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Creation complete after 3s [id=arn:aws:iam::<ACCOUNT_ID>:oidc-provider/oidc.eks.eu-west-3.amazonaws.com/id/<OIDC_HASH>]
 module.eks.time_sleep.this[0]: Still creating... [00m09s elapsed]
 module.eks.time_sleep.this[0]: Still creating... [00m19s elapsed]
 module.eks.time_sleep.this[0]: Still creating... [00m28s elapsed]
@@ -192,7 +192,7 @@ Apply complete! Resources: 54 added, 0 changed, 0 destroyed.
 Outputs:
 
 cluster_certificate_authority_data = <sensitive>
-cluster_endpoint = "https://086027233DA6E5BFC3FBEC7C448E57AA.gr7.eu-west-3.eks.amazonaws.com"
+cluster_endpoint = "https://<OIDC_HASH>.gr7.eu-west-3.eks.amazonaws.com"
 cluster_name = "infoline-eks"
 configure_kubectl = "aws eks update-kubeconfig --region eu-west-3 --name infoline-eks"
 private_subnet_ids = [
@@ -201,7 +201,7 @@ private_subnet_ids = [
 ]
 vpc_id = "vpc-0d67d372811ba6592"
 julien@Julien:~/infoline-devops/terraform/eks$ aws eks update-kubeconfig --region eu-west-3 --name infoline-eks
-Updated context arn:aws:eks:eu-west-3:247898554480:cluster/infoline-eks in /home/julien/.kube/config
+Updated context arn:aws:eks:eu-west-3:<ACCOUNT_ID>:cluster/infoline-eks in /home/julien/.kube/config
 julien@Julien:~/infoline-devops/terraform/eks$ kubectl get nodes
 NAME                                      STATUS   ROLES    AGE    VERSION
 ip-10-0-1-14.eu-west-3.compute.internal   Ready    <none>   4m6s   v1.34.9-eks-93b80c6

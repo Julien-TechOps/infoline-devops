@@ -6,7 +6,7 @@ Do you really want to destroy all resources?
 
 module.eks.module.eks_managed_node_group["main"].module.user_data.null_resource.validate_cluster_service_cidr: Destroying... [id=6184312201344725227]
 module.eks.module.eks_managed_node_group["main"].module.user_data.null_resource.validate_cluster_service_cidr: Destruction complete after 0s
-module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Destroying... [id=arn:aws:iam::247898554480:oidc-provider/oidc.eks.eu-west-3.amazonaws.com/id/086027233DA6E5BFC3FBEC7C448E57AA]
+module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Destroying... [id=arn:aws:iam::<ACCOUNT_ID>:oidc-provider/oidc.eks.eu-west-3.amazonaws.com/id/<OIDC_HASH>]
 module.eks.aws_iam_role_policy_attachment.custom[0]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001-20260701053415036100000006]
 module.vpc.aws_route_table_association.private[0]: Destroying... [id=rtbassoc-0ea08c4cc99acf13c]
 module.vpc.aws_route_table_association.public[0]: Destroying... [id=rtbassoc-07d8847169b865249]
@@ -14,7 +14,7 @@ module.vpc.aws_route_table_association.public[1]: Destroying... [id=rtbassoc-002
 module.eks.aws_iam_role_policy_attachment.cluster_encryption[0]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001-20260701053441588300000010]
 module.vpc.aws_default_network_acl.this[0]: Destroying... [id=acl-0df8b46af5ab84686]
 module.vpc.aws_route.private_nat_gateway[0]: Destroying... [id=r-rtb-0f0795fab986b60cd1080289494]
-module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Destroying... [id=infoline-eks#arn:aws:iam::247898554480:user/terraform-ecf#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy]
+module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Destroying... [id=infoline-eks#arn:aws:iam::<ACCOUNT_ID>:user/<IAM_USER>#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy]
 module.vpc.aws_route.public_internet_gateway[0]: Destroying... [id=r-rtb-070bfcedd6058cbab1080289494]
 module.vpc.aws_default_network_acl.this[0]: Destruction complete after 0s
 module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Destroying... [id=infoline-eks:main-20260701054245615800000013]
@@ -22,17 +22,17 @@ module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Dest
 module.vpc.aws_route_table_association.private[1]: Destroying... [id=rtbassoc-0f3f86a312d7de772]
 module.eks.aws_iam_role_policy_attachment.custom[0]: Destruction complete after 1s
 module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Destruction complete after 1s
-module.vpc.aws_default_security_group.this[0]: Destroying... [id=sg-0793937940500f167]
+module.vpc.aws_default_security_group.this[0]: Destroying... [id=<SG_DEFAULT_ID>]
 module.vpc.aws_default_route_table.default[0]: Destroying... [id=rtb-0444b021cbb62d28a]
 module.vpc.aws_default_route_table.default[0]: Destruction complete after 0s
 module.vpc.aws_default_security_group.this[0]: Destruction complete after 0s
 module.eks.module.kms.aws_kms_alias.this["cluster"]: Destroying... [id=alias/eks/infoline-eks]
 module.eks.aws_iam_role_policy_attachment.cluster_encryption[0]: Destruction complete after 1s
-module.eks.aws_iam_policy.custom[0]: Destroying... [id=arn:aws:iam::247898554480:policy/infoline-eks-cluster-20260701053412151400000003]
-module.eks.aws_eks_access_entry.this["cluster_creator"]: Destroying... [id=infoline-eks:arn:aws:iam::247898554480:user/terraform-ecf]
+module.eks.aws_iam_policy.custom[0]: Destroying... [id=arn:aws:iam::<ACCOUNT_ID>:policy/infoline-eks-cluster-20260701053412151400000003]
+module.eks.aws_eks_access_entry.this["cluster_creator"]: Destroying... [id=infoline-eks:arn:aws:iam::<ACCOUNT_ID>:user/<IAM_USER>]
 module.vpc.aws_route_table_association.public[0]: Destruction complete after 1s
 module.vpc.aws_route_table_association.public[1]: Destruction complete after 1s
-module.eks.aws_iam_policy.cluster_encryption[0]: Destroying... [id=arn:aws:iam::247898554480:policy/infoline-eks-cluster-ClusterEncryption2026070105343969350000000f]
+module.eks.aws_iam_policy.cluster_encryption[0]: Destroying... [id=arn:aws:iam::<ACCOUNT_ID>:policy/infoline-eks-cluster-ClusterEncryption2026070105343969350000000f]
 module.vpc.aws_route_table_association.private[0]: Destruction complete after 1s
 module.vpc.aws_route.public_internet_gateway[0]: Destruction complete after 2s
 module.vpc.aws_route.private_nat_gateway[0]: Destruction complete after 2s
