@@ -16,18 +16,18 @@ Prochaine session (Jeu 2 juil) : Lambda + API Gateway en Terraform.
 
 ## Avancement par phase
 
-| Date | Phase | Objectif (PRO) | Fiche(s) | Infra | Doc | Captures |
+| Date | Phase | Question ECF | Objectif (PRO) | Infra | Doc | Captures |
 |---|---|---|---|---|---|---|
-| 18-19 juin | Phase 0 — Socle | AWS + Terraform + Docker réactivés | B1 P3, P7 · B2 P3 | ✅ | ✅ | ✅ |
-| Mer 1 juil | Phase 1 — EKS | Cluster EKS provisionné par Terraform | B1 P4, P7 | ✅ | ✅ | ✅ |
-| Jeu 2 juil | Phase 1 — Lambda | Lambda + API Gateway en Terraform | B1 P4, P7 | ❌ | ❌ | ❌ |
-| Ven 3 juil | Phase 2 — Spring Boot | API Spring Boot dockerisée | B2 P3 | ❌ | ❌ | ❌ |
-| Lun 6 juil | Phase 2 — Angular | App Angular dockerisée | B2 P3 | ❌ | ❌ | ❌ |
-| 7-10 juil | Phase 3 — CI/CD | Pipelines CircleCI build/test/deploy sur EKS | B2 P1, P3, P4 · B1 P1 | ❌ | ❌ | ❌ |
-| 13-15 juil | Phase 4 — ELK | Elasticsearch + Kibana sur logs K8s | B3 P1-P4 | ❌ | ❌ | ❌ |
-| 16 juil | Tampon technique | Absorber le dérapage le plus probable (ELK/CircleCI) | Selon trous | ❌ | — | — |
-| 17 juil | Phase 5 — Doc archi | Schéma d'architecture complet + repo Git propre | B1 P1 | — | ❌ | — |
-| 20 juil | Phase 5 — Copie A1+A2 | Rédaction copie, Activités 1 et 2 | B1, B2 | — | ❌ | ❌ |
-| 21 juil | Phase 5 — Copie A3 | Rédaction copie A3 + relecture globale | B3 · Toutes | — | ❌ | ❌ |
-| 22 juil (matin) | Phase 5 — Tampon final | Rattrapages avant le run, vérif des 3 livrables | Selon trous | — | ❌ | ❌ |
-| 22 juil (après-midi) | Finalisation | Run complet (destroy+rebuild sans intervention manuelle) + dépôt | Toutes | ❌ | ❌ | ❌ |
+| 18-19 juin | Phase 0 — Socle | — | AWS + Terraform + Docker réactivés | ✅ | ✅ | ✅ |
+| Mer 1 juil | Phase 1 — EKS | A1-Q1 (1/2) | Cluster EKS provisionné par Terraform | ✅ | ✅ | ✅ |
+| Jeu 2 juil | Phase 1 — Lambda | A1-Q1 (2/2) | Lambda + API Gateway en Terraform | ❌ | ❌ | ❌ |
+| Ven 3 juil | Phase 2 — Spring Boot | A2-Q1 · A2-Q2 | API Spring Boot dockerisée | ❌ | ❌ | ❌ |
+| Lun 6 juil | Phase 2 — Angular | A2-Q4 | App Angular dockerisée | ❌ | ❌ | ❌ |
+| 7-10 juil | Phase 3 — CI/CD | A2-Q3 · A2-Q5 | Pipelines CircleCI build/test/deploy sur EKS | ❌ | ❌ | ❌ |
+| 13-15 juil | Phase 4 — ELK | A3-Q1 · A3-Q2 | Elasticsearch + Kibana sur logs K8s | ❌ | ❌ | ❌ |
+| 16 juil | Tampon technique | Selon trous | Absorber le dérapage le plus probable (ELK/CircleCI) | ❌ | — | — |
+| 17 juil | Phase 5 — Doc archi | Toutes | Schéma d'architecture complet + repo Git propre | — | ❌ | — |
+| 20 juil | Phase 5 — Copie A1+A2 | A1 · A2 | Rédaction copie, Activités 1 et 2 | — | ❌ | ❌ |
+| 21 juil | Phase 5 — Copie A3 | A3 | Rédaction copie A3 + relecture globale | — | ❌ | ❌ |
+| 22 juil (matin) | Phase 5 — Tampon final | Selon trous | Rattrapages avant le run, vérif des 3 livrables | — | ❌ | ❌ |
+| 22 juil (après-midi) | Finalisation | Toutes | Run complet (destroy+rebuild sans intervention manuelle) + dépôt | ❌ | ❌ | ❌ |
