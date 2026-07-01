@@ -174,3 +174,25 @@ Monter `./code:/app` en volume est acceptable en dev (hot reload). En prod c'est
 - Ne jamais utiliser `latest` comme tag en CI/CD — toujours un tag sémantique ou SHA Git
 - Dockerfile multi-stage : pas encore abordé — à couvrir avant la phase CI/CD (réduit drastiquement la taille des images de prod)
 - Revoir la distinction Compose / Swarm / Kubernetes avant l'ECF : trois niveaux, trois usages, ne pas confondre
+
+---
+
+## Session Mer 1 juil — Phase 1 A1 : EKS
+
+### Friction 1 — Version Kubernetes non supportée
+**Symptôme :** `InvalidParameterException: unsupported Kubernetes version 1.29` au moment du `terraform apply`
+**Cause :** AWS retire les anciennes versions de son catalogue (cycle ~14 mois support standard). La version 1.29 était dans le code mais plus disponible à la création.
+**Résolution :** `aws eks describe-cluster-versions --query "clusterVersions[?status=='STANDARD_SUPPORT'].clusterVersion"` → versions disponibles : 1.33/1.34/1.35/1.36. Mis `cluster_version = "1.34"` dans terraform.tfvars (pas dans variables.tf pour respecter la séparation code/valeurs).
+**Leçon :** Toujours vérifier la liste des versions EKS supportées avant d'écrire la valeur dans le code. À faire en début de session si du temps a passé.
+
+### Friction 2 — Node group "deposed" après apply partiel
+**Symptôme :** Second apply affiche `1 added, 0 changed, 1 destroyed` avec un objet "deposed" détruit.
+**Cause :** Le premier apply avait échoué après la création du node group mais avant la fin du cycle. Terraform avait gardé l'ancien objet en état "deposed" en attente de nettoyage.
+**Résolution :** Aucune action manuelle nécessaire — le second apply a créé le nouveau node group puis détruit l'ancien automatiquement.
+**Leçon :** Un `deposed object` dans les logs Terraform n'est pas une erreur. C'est le mécanisme de remplacement sécurisé (create before destroy). Après un destroy, vérifier avec `terraform state list` ET `aws eks list-clusters` — ne pas se fier à un seul signal.
+
+### Friction 3 — Commandes collées en une ligne (copier-coller terminal)
+**Symptôme :** `Unknown options: kubectl,get,nodes` après avoir collé deux commandes en une.
+**Cause :** Copier-coller d'un bloc multi-commandes sans vérifier la séparation — le terminal a concaténé les deux lignes.
+**Résolution :** Corriger avec `&&` entre les commandes, ou les exécuter séparément.
+**Leçon :** Toujours relire ce qui est collé dans le terminal avant de valider. En cas de doute, séparer les commandes.

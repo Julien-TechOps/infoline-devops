@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** (à compléter à chaque session)
+**Dernière mise à jour :** Mer 1 juil 2026
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -11,14 +11,15 @@
 - [ ] Copie à rendre + captures (nomenclature : ECF_BDOps_Hiver2025_copiearendre_NOM_Prenom)
 
 ## Où j'en suis / prochaine action
-(2-3 lignes mises à jour en fin de session — fait office de handover)
+Phase 1 A1 terminée : VPC + cluster EKS + node group provisionnés, 2 nodes Ready v1.34, destroy propre confirmé.
+Prochaine session (Jeu 2 juil) : Lambda + API Gateway en Terraform.
 
 ## Avancement par phase
 
 | Date | Phase | Objectif (PRO) | Fiche(s) | Infra | Doc | Captures |
 |---|---|---|---|---|---|---|
 | 18-19 juin | Phase 0 — Socle | AWS + Terraform + Docker réactivés | B1 P3, P7 · B2 P3 | ✅ | ✅ | ✅ |
-| Mer 1 juil | Phase 1 — EKS | Cluster EKS provisionné par Terraform | B1 P4, P7 | ❌ | ❌ | ❌ |
+| Mer 1 juil | Phase 1 — EKS | Cluster EKS provisionné par Terraform | B1 P4, P7 | ✅ | ✅ | ❌ |
 | Jeu 2 juil | Phase 1 — Lambda | Lambda + API Gateway en Terraform | B1 P4, P7 | ❌ | ❌ | ❌ |
 | Ven 3 juil | Phase 2 — Spring Boot | API Spring Boot dockerisée | B2 P3 | ❌ | ❌ | ❌ |
 | Lun 6 juil | Phase 2 — Angular | App Angular dockerisée | B2 P3 | ❌ | ❌ | ❌ |
