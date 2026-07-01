@@ -1,0 +1,195 @@
+Do you really want to destroy all resources?
+  Terraform will destroy all your managed infrastructure, as shown above.
+  There is no undo. Only 'yes' will be accepted to confirm.
+
+  Enter a value: yes
+
+module.eks.module.eks_managed_node_group["main"].module.user_data.null_resource.validate_cluster_service_cidr: Destroying... [id=6184312201344725227]
+module.eks.module.eks_managed_node_group["main"].module.user_data.null_resource.validate_cluster_service_cidr: Destruction complete after 0s
+module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Destroying... [id=arn:aws:iam::247898554480:oidc-provider/oidc.eks.eu-west-3.amazonaws.com/id/086027233DA6E5BFC3FBEC7C448E57AA]
+module.eks.aws_iam_role_policy_attachment.custom[0]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001-20260701053415036100000006]
+module.vpc.aws_route_table_association.private[0]: Destroying... [id=rtbassoc-0ea08c4cc99acf13c]
+module.vpc.aws_route_table_association.public[0]: Destroying... [id=rtbassoc-07d8847169b865249]
+module.vpc.aws_route_table_association.public[1]: Destroying... [id=rtbassoc-0022f35f00afa901e]
+module.eks.aws_iam_role_policy_attachment.cluster_encryption[0]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001-20260701053441588300000010]
+module.vpc.aws_default_network_acl.this[0]: Destroying... [id=acl-0df8b46af5ab84686]
+module.vpc.aws_route.private_nat_gateway[0]: Destroying... [id=r-rtb-0f0795fab986b60cd1080289494]
+module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Destroying... [id=infoline-eks#arn:aws:iam::247898554480:user/terraform-ecf#arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy]
+module.vpc.aws_route.public_internet_gateway[0]: Destroying... [id=r-rtb-070bfcedd6058cbab1080289494]
+module.vpc.aws_default_network_acl.this[0]: Destruction complete after 0s
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Destroying... [id=infoline-eks:main-20260701054245615800000013]
+module.eks.aws_eks_access_policy_association.this["cluster_creator_admin"]: Destruction complete after 0s
+module.vpc.aws_route_table_association.private[1]: Destroying... [id=rtbassoc-0f3f86a312d7de772]
+module.eks.aws_iam_role_policy_attachment.custom[0]: Destruction complete after 1s
+module.eks.aws_iam_openid_connect_provider.oidc_provider[0]: Destruction complete after 1s
+module.vpc.aws_default_security_group.this[0]: Destroying... [id=sg-0793937940500f167]
+module.vpc.aws_default_route_table.default[0]: Destroying... [id=rtb-0444b021cbb62d28a]
+module.vpc.aws_default_route_table.default[0]: Destruction complete after 0s
+module.vpc.aws_default_security_group.this[0]: Destruction complete after 0s
+module.eks.module.kms.aws_kms_alias.this["cluster"]: Destroying... [id=alias/eks/infoline-eks]
+module.eks.aws_iam_role_policy_attachment.cluster_encryption[0]: Destruction complete after 1s
+module.eks.aws_iam_policy.custom[0]: Destroying... [id=arn:aws:iam::247898554480:policy/infoline-eks-cluster-20260701053412151400000003]
+module.eks.aws_eks_access_entry.this["cluster_creator"]: Destroying... [id=infoline-eks:arn:aws:iam::247898554480:user/terraform-ecf]
+module.vpc.aws_route_table_association.public[0]: Destruction complete after 1s
+module.vpc.aws_route_table_association.public[1]: Destruction complete after 1s
+module.eks.aws_iam_policy.cluster_encryption[0]: Destroying... [id=arn:aws:iam::247898554480:policy/infoline-eks-cluster-ClusterEncryption2026070105343969350000000f]
+module.vpc.aws_route_table_association.private[0]: Destruction complete after 1s
+module.vpc.aws_route.public_internet_gateway[0]: Destruction complete after 2s
+module.vpc.aws_route.private_nat_gateway[0]: Destruction complete after 2s
+module.vpc.aws_route_table.public[0]: Destroying... [id=rtb-070bfcedd6058cbab]
+module.vpc.aws_route_table_association.private[1]: Destruction complete after 1s
+module.vpc.aws_route_table.private[0]: Destroying... [id=rtb-0f0795fab986b60cd]
+module.vpc.aws_nat_gateway.this[0]: Destroying... [id=nat-03e7639f6d2ff7e3a]
+module.eks.aws_eks_access_entry.this["cluster_creator"]: Destruction complete after 1s
+module.eks.aws_iam_policy.custom[0]: Destruction complete after 1s
+module.eks.aws_iam_policy.cluster_encryption[0]: Destruction complete after 1s
+module.eks.module.kms.aws_kms_alias.this["cluster"]: Destruction complete after 1s
+module.vpc.aws_route_table.private[0]: Destruction complete after 1s
+module.vpc.aws_route_table.public[0]: Destruction complete after 1s
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 00m09s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Still destroying... [id=nat-03e7639f6d2ff7e3a, 00m09s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 00m18s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Still destroying... [id=nat-03e7639f6d2ff7e3a, 00m18s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 00m27s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Still destroying... [id=nat-03e7639f6d2ff7e3a, 00m27s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 00m36s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Still destroying... [id=nat-03e7639f6d2ff7e3a, 00m36s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 00m51s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Still destroying... [id=nat-03e7639f6d2ff7e3a, 00m45s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 00m54s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Still destroying... [id=nat-03e7639f6d2ff7e3a, 00m54s elapsed]
+module.vpc.aws_nat_gateway.this[0]: Destruction complete after 57s
+module.vpc.aws_subnet.public[1]: Destroying... [id=subnet-0d139ab8b49aeb934]
+module.vpc.aws_subnet.public[0]: Destroying... [id=subnet-0b38f564f3cf5ef87]
+module.vpc.aws_eip.nat[0]: Destroying... [id=eipalloc-090ee45cb0ed9d015]
+module.vpc.aws_subnet.public[0]: Destruction complete after 1s
+module.vpc.aws_subnet.public[1]: Destruction complete after 1s
+module.vpc.aws_eip.nat[0]: Destruction complete after 1s
+module.vpc.aws_internet_gateway.this[0]: Destroying... [id=igw-089a072ba34cd9e7d]
+module.vpc.aws_internet_gateway.this[0]: Destruction complete after 1s
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m03s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m12s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m21s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m30s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m40s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m49s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 01m58s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 02m13s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 02m16s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 02m25s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 02m34s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 02m43s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 02m52s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m01s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m10s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m20s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m29s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m38s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m47s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 03m56s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 04m05s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 04m15s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 04m24s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 04m32s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 04m42s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 04m56s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m00s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m09s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m18s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m27s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m36s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m46s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 05m55s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m04s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m13s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m22s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m36s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m40s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m49s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 06m58s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Still destroying... [id=infoline-eks:main-20260701054245615800000013, 07m07s elapsed]
+module.eks.module.eks_managed_node_group["main"].aws_eks_node_group.this[0]: Destruction complete after 7m14s
+module.eks.module.eks_managed_node_group["main"].aws_launch_template.this[0]: Destroying... [id=lt-015ff966a5efc9531]
+module.eks.module.eks_managed_node_group["main"].aws_launch_template.this[0]: Destruction complete after 1s
+module.eks.module.eks_managed_node_group["main"].aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"]: Destroying... [id=main-eks-node-group-20260701053412150700000002-20260701053415562700000007]
+module.eks.module.eks_managed_node_group["main"].aws_iam_role_policy_attachment.this["AmazonEKS_CNI_Policy"]: Destroying... [id=main-eks-node-group-20260701053412150700000002-20260701053415019800000004]
+module.eks.module.eks_managed_node_group["main"].aws_iam_role_policy_attachment.this["AmazonEC2ContainerRegistryReadOnly"]: Destroying... [id=main-eks-node-group-20260701053412150700000002-20260701053415563100000008]
+module.eks.time_sleep.this[0]: Destroying... [id=2026-07-01T05:42:38Z]
+module.eks.time_sleep.this[0]: Destruction complete after 0s
+module.eks.aws_eks_cluster.this[0]: Destroying... [id=infoline-eks]
+module.eks.module.eks_managed_node_group["main"].aws_iam_role_policy_attachment.this["AmazonEKS_CNI_Policy"]: Destruction complete after 1s
+module.eks.module.eks_managed_node_group["main"].aws_iam_role_policy_attachment.this["AmazonEC2ContainerRegistryReadOnly"]: Destruction complete after 2s
+module.eks.module.eks_managed_node_group["main"].aws_iam_role_policy_attachment.this["AmazonEKSWorkerNodePolicy"]: Destruction complete after 2s
+module.eks.module.eks_managed_node_group["main"].aws_iam_role.this[0]: Destroying... [id=main-eks-node-group-20260701053412150700000002]
+module.eks.module.eks_managed_node_group["main"].aws_iam_role.this[0]: Destruction complete after 1s
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 00m09s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 00m18s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 00m27s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 00m36s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 00m45s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 00m54s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m03s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m12s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m21s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m36s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m40s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m49s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 01m58s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 02m07s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 02m16s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 02m25s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 02m34s elapsed]
+module.eks.aws_eks_cluster.this[0]: Still destroying... [id=infoline-eks, 02m43s elapsed]
+module.eks.aws_eks_cluster.this[0]: Destruction complete after 2m45s
+module.eks.aws_iam_role_policy_attachment.this["AmazonEKSClusterPolicy"]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001-20260701053415563200000009]
+module.eks.aws_security_group_rule.node["ingress_self_coredns_tcp"]: Destroying... [id=sgrule-220702165]
+module.eks.aws_security_group_rule.node["ingress_cluster_9443_webhook"]: Destroying... [id=sgrule-2732305770]
+module.eks.aws_security_group_rule.node["egress_all"]: Destroying... [id=sgrule-1226588752]
+module.eks.aws_security_group_rule.node["ingress_nodes_ephemeral"]: Destroying... [id=sgrule-734559007]
+module.eks.aws_security_group_rule.node["ingress_cluster_8443_webhook"]: Destroying... [id=sgrule-3329924769]
+module.vpc.aws_subnet.private[0]: Destroying... [id=subnet-0e65376cdcd987330]
+module.vpc.aws_subnet.private[1]: Destroying... [id=subnet-0609a2363310c6436]
+module.eks.aws_security_group_rule.node["ingress_cluster_443"]: Destroying... [id=sgrule-918321311]
+module.eks.aws_iam_role_policy_attachment.this["AmazonEKSVPCResourceController"]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001-20260701053415019900000005]
+module.eks.aws_iam_role_policy_attachment.this["AmazonEKSClusterPolicy"]: Destruction complete after 2s
+module.eks.aws_iam_role_policy_attachment.this["AmazonEKSVPCResourceController"]: Destruction complete after 2s
+module.eks.aws_security_group_rule.node["ingress_cluster_4443_webhook"]: Destroying... [id=sgrule-476366102]
+module.eks.module.kms.aws_kms_key.this[0]: Destroying... [id=0ddfaf0a-d657-4ea3-bcef-c8200364087e]
+module.vpc.aws_subnet.private[1]: Destruction complete after 3s
+module.eks.aws_security_group_rule.node["ingress_cluster_kubelet"]: Destroying... [id=sgrule-4170437747]
+module.eks.aws_security_group_rule.node["ingress_self_coredns_tcp"]: Destruction complete after 3s
+module.vpc.aws_subnet.private[0]: Destruction complete after 3s
+module.eks.aws_security_group_rule.node["ingress_cluster_6443_webhook"]: Destroying... [id=sgrule-3576078976]
+module.eks.aws_cloudwatch_log_group.this[0]: Destroying... [id=/aws/eks/infoline-eks/cluster]
+module.eks.aws_security_group_rule.node["egress_all"]: Destruction complete after 4s
+module.eks.aws_security_group_rule.node["ingress_self_coredns_udp"]: Destroying... [id=sgrule-2843215418]
+module.eks.module.kms.aws_kms_key.this[0]: Destruction complete after 2s
+module.eks.aws_security_group_rule.cluster["ingress_nodes_443"]: Destroying... [id=sgrule-477732568]
+module.eks.aws_cloudwatch_log_group.this[0]: Destruction complete after 1s
+module.eks.aws_iam_role.this[0]: Destroying... [id=infoline-eks-cluster-20260701053412150500000001]
+module.eks.aws_security_group_rule.node["ingress_cluster_8443_webhook"]: Destruction complete after 5s
+module.eks.aws_security_group_rule.cluster["ingress_nodes_443"]: Destruction complete after 1s
+module.eks.aws_security_group_rule.node["ingress_cluster_9443_webhook"]: Destruction complete after 11s
+module.eks.aws_iam_role.this[0]: Destruction complete after 7s
+module.eks.aws_security_group_rule.node["ingress_cluster_443"]: Destruction complete after 6s
+module.eks.aws_security_group_rule.node["ingress_nodes_ephemeral"]: Destruction complete after 7s
+module.eks.aws_security_group_rule.node["ingress_cluster_4443_webhook"]: Destruction complete after 6s
+module.eks.aws_security_group_rule.node["ingress_cluster_kubelet"]: Destruction complete after 6s
+module.eks.aws_security_group_rule.node["ingress_cluster_6443_webhook"]: Destruction complete after 13s
+module.eks.aws_security_group_rule.node["ingress_self_coredns_udp"]: Destruction complete after 7s
+module.eks.aws_security_group.cluster[0]: Destroying... [id=sg-0df0fb7b3cc17f524]
+module.eks.aws_security_group.node[0]: Destroying... [id=sg-0a9b5599547c38ced]
+module.eks.aws_security_group.cluster[0]: Destruction complete after 2s
+module.eks.aws_security_group.node[0]: Destruction complete after 2s
+module.vpc.aws_vpc.this[0]: Destroying... [id=vpc-0d67d372811ba6592]
+module.vpc.aws_vpc.this[0]: Destruction complete after 1s
+
+Destroy complete! Resources: 54 destroyed.
+julien@Julien:~/infoline-devops/terraform/eks$ 
+
+julien@Julien:~/infoline-devops/terraform/eks$ terraform state list
+julien@Julien:~/infoline-devops/terraform/eks$ aws eks list-clusters --region eu-west-3
+{
+    "clusters": []
+}
+julien@Julien:~/infoline-devops/terraform/eks$ 

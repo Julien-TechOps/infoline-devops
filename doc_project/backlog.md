@@ -19,7 +19,7 @@ Prochaine session (Jeu 2 juil) : Lambda + API Gateway en Terraform.
 | Date | Phase | Objectif (PRO) | Fiche(s) | Infra | Doc | Captures |
 |---|---|---|---|---|---|---|
 | 18-19 juin | Phase 0 — Socle | AWS + Terraform + Docker réactivés | B1 P3, P7 · B2 P3 | ✅ | ✅ | ✅ |
-| Mer 1 juil | Phase 1 — EKS | Cluster EKS provisionné par Terraform | B1 P4, P7 | ✅ | ✅ | ❌ |
+| Mer 1 juil | Phase 1 — EKS | Cluster EKS provisionné par Terraform | B1 P4, P7 | ✅ | ✅ | ✅ |
 | Jeu 2 juil | Phase 1 — Lambda | Lambda + API Gateway en Terraform | B1 P4, P7 | ❌ | ❌ | ❌ |
 | Ven 3 juil | Phase 2 — Spring Boot | API Spring Boot dockerisée | B2 P3 | ❌ | ❌ | ❌ |
 | Lun 6 juil | Phase 2 — Angular | App Angular dockerisée | B2 P3 | ❌ | ❌ | ❌ |
