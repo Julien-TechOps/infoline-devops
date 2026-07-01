@@ -2,7 +2,9 @@
 .terraform/
 *.tfstate
 *.tfstate.backup
+.terraform.lock.hcl
 tfplan
+plan.txt
 
 # Node / Angular
 node_modules/
@@ -13,3 +15,6 @@ dist/
 
 # OS
 .DS_Store
+
+# draft and notes
+draft.md
