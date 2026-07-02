@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** Mer 1 juil 2026
+**Dernière mise à jour :** Jeu 2 juil 2026
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -12,7 +12,8 @@
 
 ## Où j'en suis / prochaine action
 Phase 1 A1 terminée : VPC + cluster EKS + node group provisionnés, 2 nodes Ready v1.34, destroy propre confirmé.
-Prochaine session (Jeu 2 juil) : Lambda + API Gateway en Terraform.
+Phase 1 Lambda terminée : bug de structure (dossier imbriqué cassant `source_dir`) détecté et corrigé avant apply, handler basculé en Java (conformité énoncé), `terraform apply` exécuté (8 ressources), invocation validée par curl et `aws lambda invoke`. Validation façon formateur (7 blocs) faite avec Claude.ai. Reste : captures CLI optionnelles (transcript déjà complet), commit Git.
+Prochaine session (Ven 3 juil) : Phase 2 — Spring Boot (A2-Q1, A2-Q2).
 
 ## Avancement par phase
 
@@ -20,7 +21,7 @@ Prochaine session (Jeu 2 juil) : Lambda + API Gateway en Terraform.
 |---|---|---|---|---|---|---|
 | 18-19 juin | Phase 0 — Socle | — | AWS + Terraform + Docker réactivés | ✅ | ✅ | ✅ |
 | Mer 1 juil | Phase 1 — EKS | A1-Q1 (1/2) | Cluster EKS provisionné par Terraform | ✅ | ✅ | ✅ |
-| Jeu 2 juil | Phase 1 — Lambda | A1-Q1 (2/2) | Lambda + API Gateway en Terraform | ❌ | ❌ | ❌ |
+| Jeu 2 juil | Phase 1 — Lambda | A1-Q1 (2/2) | Lambda + API Gateway en Terraform | ✅ | ✅ | ✅ |
 | Ven 3 juil | Phase 2 — Spring Boot | A2-Q1 · A2-Q2 | API Spring Boot dockerisée | ❌ | ❌ | ❌ |
 | Lun 6 juil | Phase 2 — Angular | A2-Q4 | App Angular dockerisée | ❌ | ❌ | ❌ |
 | 7-10 juil | Phase 3 — CI/CD | A2-Q3 · A2-Q5 | Pipelines CircleCI build/test/deploy sur EKS | ❌ | ❌ | ❌ |

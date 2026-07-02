@@ -63,14 +63,18 @@ Deux équipes sont montées, une pour le développement et l'autre pour la DevOp
 
 ## Correspondance questions ↔ phases projet
 
-| Question ECF | Intitulé | Phase projet | Captures |
-|---|---|---|---|
-| A1-Q1 (partie 1) | Cluster Kubernetes en IaC | Phase 1 — EKS | A1-Q1_terraform-apply..., A1-Q1_eks-console.png, A1-Q1_terraform-destroy... |
-| A1-Q1 (partie 2) | Serverless Lambda en IaC | Phase 1 — Lambda | À produire |
-| A2-Q1 | Spring Boot hello world exposé sur un port | Phase 2 — Spring Boot | À produire |
-| A2-Q2 | Dockerisation Spring Boot | Phase 2 — Spring Boot | À produire |
-| A2-Q3 | CI/CD build/test/deploy Spring Boot → EKS | Phase 3 — CI/CD | À produire |
-| A2-Q4 | Angular hello world | Phase 2 — Angular | À produire |
-| A2-Q5 | CI/CD build/test Angular (CircleCI) | Phase 3 — CI/CD | À produire |
-| A3-Q1 | Elasticsearch connecté à Kubernetes | Phase 4 — ELK | À produire |
-| A3-Q2 | Kibana + exemples de queries sur logs | Phase 4 — ELK | À produire |
+Chaque question a une fiche de synthèse dans `doc_project/{Question}_synthese.md` — une
+par question ECF (pas par sous-partie technique), pré-rédaction continue de la copie à
+rendre. Le detail brut (captures, transcripts) reste dans `doc_project/captures/`.
+
+| Question ECF | Intitulé | Phase projet | Synthèse | Captures |
+|---|---|---|---|---|
+| A1-Q1 (partie 1) | Cluster Kubernetes en IaC | Phase 1 — EKS | A1-Q1_synthese.md | A1-Q1_terraform-apply..., A1-Q1_eks-console.png, A1-Q1_terraform-destroy... |
+| A1-Q1 (partie 2) | Serverless Lambda en IaC | Phase 1 — Lambda | A1-Q1_synthese.md | A1-Q1_lambda-terraform-apply-output-CLI-validation.md, A1-Q1_lambda-console-aws... |
+| A2-Q1 | Spring Boot hello world exposé sur un port | Phase 2 — Spring Boot | À produire | À produire |
+| A2-Q2 | Dockerisation Spring Boot | Phase 2 — Spring Boot | À produire | À produire |
+| A2-Q3 | CI/CD build/test/deploy Spring Boot → EKS | Phase 3 — CI/CD | À produire | À produire |
+| A2-Q4 | Angular hello world | Phase 2 — Angular | À produire | À produire |
+| A2-Q5 | CI/CD build/test Angular (CircleCI) | Phase 3 — CI/CD | À produire | À produire |
+| A3-Q1 | Elasticsearch connecté à Kubernetes | Phase 4 — ELK | À produire | À produire |
+| A3-Q2 | Kibana + exemples de queries sur logs | Phase 4 — ELK | À produire | À produire |

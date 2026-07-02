@@ -35,14 +35,10 @@ aws eks update-kubeconfig --region eu-west-3 --name infoline-eks
 kubectl get nodes
 ```
 
-## Points à documenter dans la copie (A1-Q1)
+## Documentation
 
-- Capture de `terraform apply` qui se termine sans erreur.
-- Capture de `kubectl get nodes` montrant les 2 nodes en `Ready`.
-- 2-3 lignes sur le **pourquoi** : VPC dédié avec subnets privés pour les
-  nodes (pas d'exposition directe Internet), module officiel plutôt que
-  ressources brutes (fiabilité, moins de code à maintenir), node group managé
-  par AWS (auto-remplacement des instances défaillantes, mise à jour facilitée).
+Rationale complète dans `architecture.md` (section "Cluster Kubernetes — Amazon EKS"),
+synthèse pour la copie dans `doc_project/A1-Q1_synthese.md`.
 
 ## Nettoyage (important pour le budget AWS)
 

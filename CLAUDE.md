@@ -28,9 +28,12 @@ Terraform (IaC). Dépôt final le 23 juillet 2026.
 ## Rituel de fin de session (non négociable)
 1. Commit Git (le lien Git est un livrable noté).
 2. Ajouter une entrée dans `doc_project/FRICTIONS.md`.
-3. Nommer les captures par question (ex. `A2-Q2_dockerfile.png`).
+3. Nommer les captures par question (ex. `A2-Q2_dockerfile.png`), déposées dans
+   `doc_project/captures/` (preuve brute uniquement — pas de narratif dedans).
 4. Ajouter 2-3 lignes dans `architecture.md`, même courtes.
 5. Mettre à jour les statuts de la phase en cours dans `doc_project/backlog.md`.
+6. Mettre à jour `doc_project/{Question}_synthese.md` (un fichier par question ECF,
+   pas par sous-partie technique — cf. section suivante).
 
 ## Questions ECF et correspondance phases
 
@@ -56,6 +59,14 @@ Nommer chaque capture selon la question : `A2-Q2_dockerfile.png`, `A3-Q1_elastic
 - `doc_project/FRICTIONS.md` — journal chronologique, une entrée par session.
 - `architecture.md` — le "pourquoi" de chaque choix technique (réutilisable telle
   quelle dans la doc technique finale).
+- `doc_project/{Question}_synthese.md` — un par question ECF (ex. `A1-Q1_synthese.md`
+  couvre EKS + Lambda), pré-rédaction continue de la copie à rendre : réponse apportée,
+  pointeurs vers le code/README/captures, pointeur vers `architecture.md` pour le
+  "pourquoi", fiches Studi mobilisées, écarts assumés, statut. Ne jamais y dupliquer du
+  contenu qui a déjà un autre foyer (architecture, procédure, statut, frictions) — voir
+  `doc_project/FRICTIONS.md`, session Jeu 2 juil, pour l'incident qui a motivé cette règle.
+- `doc_project/captures/` — preuves brutes uniquement (transcripts terminal sans
+  narratif, captures d'écran). Jamais de récit ou de justification ici.
 - `RUNBOOK.md` — procédure de build/destroy/redeploy. À retester régulièrement : c'est
   littéralement la répétition du run final noté par le jury.
 

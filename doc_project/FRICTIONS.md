@@ -196,3 +196,52 @@ Monter `./code:/app` en volume est acceptable en dev (hot reload). En prod c'est
 **Cause :** Copier-coller d'un bloc multi-commandes sans vérifier la séparation — le terminal a concaténé les deux lignes.
 **Résolution :** Corriger avec `&&` entre les commandes, ou les exécuter séparément.
 **Leçon :** Toujours relire ce qui est collé dans le terminal avant de valider. En cas de doute, séparer les commandes.
+
+---
+
+## Session Jeu 2 juil — Phase 1 A1 (2/2) : Lambda + API Gateway
+
+### Friction 4 — Dossier imbriqué cassant `source_dir` (détecté avant apply)
+**Symptôme :** aucun, justement — bug silencieux détecté par relecture avant tout `terraform apply`. Le composant `terraform/lambda-login/` avait été livré avec un sous-dossier `Infoline_Lambda/` en trop, contenant les `.tf` ET le handler.
+**Cause :** `variable "source_dir"` (défaut `"../../lambda-login"`) est un chemin relatif à `path.module`. Avec les `.tf` un niveau plus bas que prévu, la résolution pointait vers un dossier qui ne contenait pas le handler à sa racine → paquet Lambda mal formé (aurait échoué à l'invocation sans erreur au `plan`/`apply`).
+**Résolution :** arborescence aplatie (`.tf` directement dans `terraform/lambda-login/`, comme `eks/`/`s3-test/`), code source déplacé vers `lambda-login/` à la racine du repo.
+**Leçon :** un chemin relatif Terraform (`path.module`, `source_dir`, etc.) ne s'auto-corrige jamais si l'arborescence bouge — `terraform validate` ne le détecte pas non plus (il ne vérifie pas que les fichiers référencés existent réellement sur disque à ce stade). Seule la lecture attentive ou un `plan`/`apply` réel l'aurait révélé. Réflexe à généraliser : après tout déplacement de dossier, relire les chemins relatifs qui le traversent.
+
+### Friction 5 — `terraform.tfvars.example` manquant, `aws_region` sans défaut
+**Symptôme :** aucun run réel, détecté à la lecture — `terraform plan` aurait échoué faute de valeur pour `aws_region` (pas de défaut dans `variables.tf`, et le fichier `.example` censé être copié n'existait pas).
+**Résolution :** fichier `terraform.tfvars.example` créé (`aws_region = "eu-west-3"`, alignée sur `terraform/eks/terraform.tfvars`), puis `terraform.tfvars` réel copié dessus (commité comme pour `eks/`, pas de secret dedans).
+**Leçon :** un exemple documenté dans un `README.md` (`cp terraform.tfvars.example ...`) n'est pas une preuve qu'il existe — vérifier physiquement les fichiers avant de suivre une procédure écrite.
+
+### Friction 6 — Écart énoncé : "Java function" vs hello-world Python
+**Symptôme :** aucun, décision consciente. Le handler initial était en Python, alors que `sujet_ECF.md` demande explicitement une "Java function" pour le login.
+**Résolution :** handler réécrit en Java 21 (`com.infoline.login.LoginHandler`), zéro dépendance externe, buildé par Maven. `lambda.tf` adapté : suppression du `data.archive_file` (incompatible avec du code compilé), référence directe au jar buildé via `filebase64sha256`.
+**Leçon :** relire l'énoncé mot à mot avant de coder l'infra, pas seulement l'esprit général ("un service serverless"). Un écart mineur en apparence (langage du hello-world) peut coûter des points à l'oral si le jury s'y attarde.
+
+### Friction 7 — Identifiant de compte AWS exposé dans une capture brute
+**Symptôme :** le transcript de `terraform apply` contenait `arn:aws:lambda:eu-west-3:<compte réel>:function:infoline-login` en clair.
+**Cause :** copier-coller direct du terminal sans repasser par la convention déjà établie sur les captures EKS (`<ACCOUNT_ID>`, `<IAM_USER>`, `<OIDC_HASH>` — cf. commit "flouter identifiants AWS dans les captures A1-Q1").
+**Résolution :** identifiant remplacé par `<ACCOUNT_ID>` avant tout commit.
+**Leçon :** la convention de floutage n'est pas automatique — à appliquer systématiquement à toute nouvelle capture brute (transcript ou screenshot), pas seulement se souvenir qu'elle existe pour EKS. Un repo public sur GitHub ne pardonne pas un oubli.
+
+### Friction 8 — `response.json` non couvert par `.gitignore`
+**Symptôme :** `aws lambda invoke ... response.json` crée un fichier de sortie local à la racine de `terraform/lambda-login/`, absent de `.gitignore`.
+**Résolution :** ligne `response.json` ajoutée au `.gitignore`.
+**Leçon :** chaque nouvelle commande de test qui écrit un fichier local mérite un réflexe `.gitignore` immédiat, sur le même principe que F01 (Phase 0) pour `.terraform/`/`*.tfstate` — ne pas attendre un rejet de push pour s'en apercevoir.
+
+### Point mineur non bloquant — `invoke_url` avec double slash
+`terraform output invoke_url` renvoie `.../amazonaws.com//login` (double slash) : le stage `$default` retourne déjà une URL terminée par `/`, additionnée au `/login` de `var.route_path`. Fonctionnel (l'invocation via cette URL a réussi), corrigeable avec `trimsuffix(...)` dans `outputs.tf` si une URL propre est souhaitée pour la documentation finale — non fait à ce stade, jugé cosmétique.
+
+## CE QUI EST ACQUIS — PHASE 1 LAMBDA
+- Composant Terraform isolé (state propre) et sa raison d'être (blast radius)
+- Résolution de chemins relatifs Terraform (`path.module`) et son piège en cas de déplacement de dossier
+- Différence de packaging Lambda interprété (zip du source) vs compilé (jar pré-construit + `filebase64sha256`)
+- Rôle IAM d'exécution au moindre privilège vs permission d'invocation (`aws_lambda_permission`) vs autorisation utilisateur — trois couches distinctes
+- Modèle de facturation serverless (usage) vs EKS (à l'heure) et son impact sur la discipline `terraform destroy`
+- Validation façon formateur (7 blocs, méthode réutilisable pour les phases suivantes) faite avec Claude.ai — cf. `doc_project/VALIDATION_lambda-iac.md` (généré puis utilisé, non conservé dans le repo)
+
+## POINTS DE VIGILANCE POUR LA SUITE
+- Avant Phase 2 (Spring Boot) : le JDK 21 + Maven installés cette session serviront directement — vérifier la version Java attendue par l'image Docker Spring Boot choisie.
+- Généraliser le réflexe de floutage (`<ACCOUNT_ID>` etc.) à toute future capture, dès la Phase 2.
+- `terraform/lambda-login/` n'a pas besoin d'un destroy systématique en fin de session (coût quasi nul à l'usage) — à la différence d'`eks/`. Documenté dans `architecture.md` et `doc_project/A1-Q1_synthese.md` pour éviter toute confusion à l'oral.
+- Relancer `mvn package` après toute modification de `LoginHandler.java`, avant `terraform apply` — Terraform ne compare que le hash du `.jar` déjà sur disque, aucune erreur si le jar n'est pas régénéré (documenté dans `terraform/lambda-login/README.md`).
+- Nouveau type de document introduit cette session : `doc_project/{Question}_synthese.md`, un par question ECF (pas par sous-partie technique), pré-rédaction continue de la copie à rendre — pas un doublon d'`architecture.md`/`backlog.md`/`captures/`. À appliquer dès A2-Q1.
