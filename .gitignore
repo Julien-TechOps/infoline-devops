@@ -5,10 +5,14 @@
 .terraform.lock.hcl
 tfplan
 plan.txt
+response.json
 
 # Node / Angular
 node_modules/
 dist/
+
+# Maven (lambda-login)
+target/
 
 # Docker
 *.env
