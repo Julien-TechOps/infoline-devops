@@ -14,8 +14,8 @@ Terraform (IaC). Dépôt final le 23 juillet 2026.
    la Phase 1, elle ne suffira pas.
 
 ## Contraintes dures
-- Ne JAMAIS sur-développer le code applicatif (Spring Boot / Angular = hello world
-  volontairement triviaux). Le métier ici est l'empaquetage et le déploiement, pas le
+- Ne JAMAIS sur-développer le code applicatif (Spring Boot dans `api/`, Angular dans `apps/`
+  = hello world volontairement triviaux). Le métier ici est l'empaquetage et le déploiement, pas le
   développement applicatif. Timeboxer durement, ne pas proposer d'améliorations non
   demandées sur ces deux apps.
 - Toujours rappeler de faire `terraform destroy` en fin de session, le soir et le

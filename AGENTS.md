@@ -13,8 +13,8 @@ Terraform (IaC). Dépôt final le 23 juillet 2026.
    La Phase 5 (doc) est compressée à ~25h : sans rédaction continue, elle ne suffira pas.
 
 ## Contraintes dures
-- Ne JAMAIS sur-développer le code applicatif (Spring Boot / Angular = hello world
-  volontairement triviaux). Le métier ici est l'empaquetage et le déploiement.
+- Ne JAMAIS sur-développer le code applicatif (Spring Boot dans `api/`, Angular dans `apps/`
+  = hello world volontairement triviaux). Le métier ici est l'empaquetage et le déploiement.
   Ne pas proposer d'améliorations non demandées sur ces deux apps.
 - Rappeler de faire `terraform destroy` en fin de session (EKS + node groups coûtent
   à l'heure sur AWS).

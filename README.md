@@ -11,6 +11,8 @@ entièrement pilotée en Terraform (IaC).
   `eks/` (cluster Kubernetes), `lambda-login/` (Lambda + API Gateway), `s3-test/`.
 - `lambda-login/` — code source Java/Maven de la Lambda "login" (`terraform/lambda-login/`
   y référence le jar buildé).
+- `api/` — API Java/Spring Boot (hello world), Dockerfile multi-stage (image
+  `infoline-api`). Destinée à EKS via CI/CD (Phase 3).
 - `appflaskmin/`, `apps/` — applications (hello world volontairement triviaux, cf.
   contrainte de non sur-développement applicatif).
 - `k8s/` — manifests Kubernetes.

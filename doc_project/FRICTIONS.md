@@ -245,3 +245,57 @@ Monter `./code:/app` en volume est acceptable en dev (hot reload). En prod c'est
 - `terraform/lambda-login/` n'a pas besoin d'un destroy systématique en fin de session (coût quasi nul à l'usage) — à la différence d'`eks/`. Documenté dans `architecture.md` et `doc_project/A1-Q1_synthese.md` pour éviter toute confusion à l'oral.
 - Relancer `mvn package` après toute modification de `LoginHandler.java`, avant `terraform apply` — Terraform ne compare que le hash du `.jar` déjà sur disque, aucune erreur si le jar n'est pas régénéré (documenté dans `terraform/lambda-login/README.md`).
 - Nouveau type de document introduit cette session : `doc_project/{Question}_synthese.md`, un par question ECF (pas par sous-partie technique), pré-rédaction continue de la copie à rendre — pas un doublon d'`architecture.md`/`backlog.md`/`captures/`. À appliquer dès A2-Q1.
+
+---
+
+## Session Ven 3 juil — Phase 2 : Spring Boot (A2-Q1) + Dockerisation (A2-Q2)
+
+Session globalement fluide : application générée via Spring Initializr, lancée en local
+(HTTP 200 sur `/hello`), puis image Docker multi-stage construite (`--no-cache` OK) et conteneur
+validé (HTTP 200, utilisateur non-root, ~92 Mo). Une seule vraie friction, plus quelques points
+d'attention.
+
+### Friction 9 — Renommage de la classe principale → erreur au démarrage
+**Symptôme :** renommer la classe principale générée par Spring Initializr (`ApiApplication`) en
+`InfolineApiApplication` (nom suggéré pour refléter le package `com.infoline.api`) provoquait une
+erreur ; l'application ne démarrait plus.
+**Cause :** le nom de la classe principale généré par Initializr est couplé à l'`artifactId` (`api`)
+et référencé à plusieurs endroits — le nom du fichier `.java` (en Java, une classe publique doit
+résider dans un fichier de même nom), la classe de test `ApiApplicationTests`, et la détection du
+*main-class* au repackage par `spring-boot-maven-plugin`. Un renommage partiel (la classe sans le
+fichier, ou sans les références) casse la compilation ou le démarrage.
+**Résolution :** nom généré conservé tel quel (`ApiApplication`). L'identité « InfoLine » est portée
+par le **package** `com.infoline.api` et par la réponse de l'endpoint (`Hello from InfoLine API`),
+pas par le nom de la classe.
+**Leçon :** ne pas renommer cosmétiquement la classe principale d'un projet Spring Initializr —
+point de couplage multiple pour zéro bénéfice sur un hello-world (la contrainte de non
+sur-développement s'y applique aussi). Conserver les noms générés.
+
+### Point mineur non bloquant — nom du starter en Spring Boot 4
+`spring-boot-starter-web` (réflexe historique) est devenu `spring-boot-starter-webmvc` en
+Spring Boot 4.x (stack Servlet/Tomcat). Le `pom.xml` généré par Initializr utilise déjà le bon nom —
+à ne pas « corriger » par habitude vers l'ancien.
+
+### Point mineur non bloquant — Maven hôte 3.8.7 vs image 3.9
+L'hôte a Maven 3.8.7, l'image de build utilise `maven:3.9-eclipse-temurin-21`. Sans impact : c'est le
+`docker build` qui fait foi pour l'image livrée (il embarque sa propre version de Maven) ; le Maven
+de l'hôte ne sert qu'au débogage local optionnel.
+
+## CE QUI EST ACQUIS — PHASE 2 SPRING BOOT
+- Dockerfile multi-stage Java : séparation JDK+Maven (build) / JRE (runtime), et ce qui traverse les
+  stages (le `.jar` seul, via `COPY --from`).
+- Ordre des couches pour le cache : `pom.xml` + `dependency:go-offline` avant `COPY src`, pour ne pas
+  re-télécharger les dépendances à chaque changement de code.
+- `EXPOSE` = documentation/métadonnée ; `-p` au `docker run` = mapping réel qui rend le port joignable
+  (confirmation du concept déjà croisé en Phase 0).
+- Impossibilité par construction d'un jar périmé avec un build multi-stage (contraste avec le piège
+  Lambda `filebase64sha256`).
+- Utilisateur non-root dans l'image (moindre privilège, cohérent avec l'IAM Lambda).
+- Déclarer explicitement `server.port` même quand la valeur = défaut, pour rendre le choix prouvable.
+
+## POINTS DE VIGILANCE POUR LA SUITE
+- Phase 3 (A2-Q3) : l'image `infoline-api` devra être taguée et poussée vers ECR (pas de `latest` en
+  CI/CD — tag SHA/sémantique), puis déployée sur EKS. Prévoir les manifests K8s (`k8s/`).
+- Convention de nommage des captures : `{Question}_descripteur` en kebab minuscule (ex.
+  `A2-Q2_docker-build.md`). Harmonisée sur toutes les captures de la session (renommage des
+  `A2-Q2-Docker-*` et des suffixes `_v1`/`_v2`) ; à maintenir dès la phase suivante.

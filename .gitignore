@@ -12,7 +12,10 @@ node_modules/
 dist/
 
 # Maven (lambda-login)
-target/
+lambda-login/target/
+
+# Maven (springboot)
+api/target/
 
 # Docker
 *.env
@@ -22,3 +25,6 @@ target/
 
 # draft and notes
 draft.md
+
+# Codex (marqueur local)
+.codex

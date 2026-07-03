@@ -109,3 +109,47 @@ terraform state list    # doit être vide
 `.jar` déjà sur disque (`filebase64sha256`). Après toute modification du handler,
 relancer `mvn -f lambda-login package` **avant** `terraform apply` — sinon `plan`
 affiche `0 to change` sans erreur ni avertissement, et l'ancien code reste déployé.
+
+---
+
+## API Spring Boot (Docker) — Cycle de vie
+
+Tout est **local** : aucun appel ni coût AWS, donc **aucun `terraform destroy`** à prévoir pour ce
+composant. (Le push vers ECR et le déploiement EKS arrivent en Phase 3.)
+
+### Prérequis
+- Docker. Le build compile le jar *dans* l'image via `maven:3.9-eclipse-temurin-21` — pas besoin de
+  Maven sur l'hôte pour construire l'image.
+
+### Construire l'image
+```bash
+cd api
+docker build -t infoline-api:local .
+```
+
+### Lancer et tester
+```bash
+docker run -d -p 8080:8080 --name infoline-api infoline-api:local
+docker ps                        # vérifier le mapping 0.0.0.0:8080->8080/tcp
+docker logs infoline-api         # vérifier "Started ApiApplication ... in X seconds"
+curl -i http://localhost:8080/hello   # attendu : HTTP 200, "Hello from InfoLine API"
+```
+
+### Nettoyer (entre deux itérations sur le Dockerfile)
+```bash
+docker stop infoline-api && docker rm infoline-api
+```
+
+### Lancer sans Docker (débogage applicatif rapide)
+```bash
+cd api
+mvn spring-boot:run                                   # mode dev
+# ou la forme exacte exécutée dans le conteneur :
+mvn package -DskipTests && java -jar target/*.jar
+```
+
+### Pas de piège « jar périmé » ici (contraste avec la Lambda)
+Contrairement à la Lambda (où Terraform ne relit que le hash d'un jar déjà buildé — voir plus haut),
+`docker build` **recompile** le jar depuis `src/` à chaque build : impossible de builder une image
+avec du code périmé. Le seul cache en jeu est celui des couches Docker, qui s'invalide correctement
+dès qu'un fichier de `src/` change.
