@@ -13,8 +13,10 @@ entièrement pilotée en Terraform (IaC).
   y référence le jar buildé).
 - `api/` — API Java/Spring Boot (hello world), Dockerfile multi-stage (image
   `infoline-api`). Destinée à EKS via CI/CD (Phase 3).
-- `appflaskmin/`, `apps/` — applications (hello world volontairement triviaux, cf.
-  contrainte de non sur-développement applicatif).
+- `apps/` — fronts Angular hello world (`frontend/` principal, `backoffice/`), chacun
+  dockerisé multi-stage (`node` → `nginx`, images `infoline-frontend`/`infoline-backoffice`).
+- `appflaskmin/` — appli Flask minimale du socle (Phase 0). Hello world volontairement
+  triviaux : cf. contrainte de non sur-développement applicatif.
 - `k8s/` — manifests Kubernetes.
 - `.circleci/` — pipelines CI/CD.
 - `doc_project/` — documentation du projet, voir ci-dessous.

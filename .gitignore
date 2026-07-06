@@ -28,3 +28,5 @@ draft.md
 
 # Codex (marqueur local)
 .codex
+# Editeur (préférence perso racine, pas les .vscode/ des apps générés par ng new)
+/.vscode/

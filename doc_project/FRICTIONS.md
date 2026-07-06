@@ -299,3 +299,52 @@ de l'hôte ne sert qu'au débogage local optionnel.
 - Convention de nommage des captures : `{Question}_descripteur` en kebab minuscule (ex.
   `A2-Q2_docker-build.md`). Harmonisée sur toutes les captures de la session (renommage des
   `A2-Q2-Docker-*` et des suffixes `_v1`/`_v2`) ; à maintenir dès la phase suivante.
+
+## Session Lun 6 juil — Phase 2 : Angular (A2-Q4)
+
+Deux apps Angular 22 hello world (`apps/frontend/`, `apps/backoffice/`), dockerisées multi-stage
+`node:24-alpine` → `nginx:1.30-alpine`, servies en local sur 8081/8082. Réalisé avec l'appui d'une
+discussion Claude.ai (cadrage du sujet, recette Dockerfile+nginx, pièges).
+
+### Cadrage — le sujet n'exige PAS la dockerisation du front
+Asymétrie repérée dans le texte du sujet : l'API a « créer / dockeriser / déployer sur le kube »
+(A2-Q1/Q2/Q3), le front n'a que « créer » (A2-Q4) et « build/test » (A2-Q5) — aucun verbe
+« déployez », aucune infra cible. Docker est un **prérequis mécanique** de A2-Q3 (Kubernetes n'exécute
+que des conteneurs), pas du front. La dockerisation du front est donc un **choix de cohérence archi
+assumé**, pas une exigence : documenté comme tel dans `A2-Q4_synthese.md` (transforme l'écart en preuve
+de compréhension). → Levier de priorisation : si le calendrier se tend, c'est le composant le moins
+risqué à simplifier/couper.
+
+### Piège dist/browser
+Le build Angular moderne (« application builder ») écrit dans `dist/<projet>/browser/`, pas
+`dist/<projet>/`. Le `COPY --from=build` doit cibler `…/browser` — sinon le site est cassé. Piège n°1
+des Dockerfile Angular+nginx copiés d'un tuto ancien.
+
+### curl ne « parle » pas pour un Angular CSR
+Sans SSR, la réponse HTTP de nginx est la coquille `<app-root></app-root>` + `<script>` : le texte
+hello world n'existe qu'après exécution du JS côté navigateur. `curl` ne peut pas l'afficher (contraste
+net avec l'API Spring Boot). → Preuve retenue : une **capture navigateur** (`A2-Q4_docker-ps-
+browser.png`), pas un curl. La capture curl initialement prévue (`A2-Q4_docker-ps-curl.png`) a été
+abandonnée (fichier vide supprimé). `curl … | grep '<title>'` ne prouve que « deux pages différentes ».
+
+### Docker Desktop mis à jour en session : conteneurs « fantômes »
+Après un update de Docker Desktop, `docker ps -a`/`docker images` vides alors que les conteneurs
+répondaient encore sur leurs ports (CLI reconnecté à un moteur neuf, ancien moteur toujours actif).
+Résolu par un restart complet de Docker Desktop. → Ne jamais laisser Docker Desktop se mettre à jour
+pendant qu'un conteneur (ou un `terraform apply`) tourne.
+
+### Node.js absent de WSL au départ
+`node -v` → command not found ; installé avant de générer les apps. Veiller à la **même version** en
+local et dans le Dockerfile (Node 24), esprit fiche B2 P1 (rapprochement dev/exécution).
+
+## CE QUI EST ACQUIS — PHASE 2 ANGULAR
+- Dockerfile multi-stage front : stage `node:24-alpine` (build jetable) → `nginx:1.30-alpine` (runtime
+  statique), `COPY --from` du seul dossier `dist/<projet>/browser`.
+- `npm ci` (lockfile, reproductible) plutôt que `npm install` ; `.dockerignore` exclut `node_modules`
+  (binaires natifs spécifiques à l'OS — variante Node du piège « jar périmé »).
+- nginx : workers déjà non-root par défaut dans l'image officielle — pas besoin de créer un user
+  (contraste avec Spring Boot).
+- CSR pur : la preuve d'un hello world Angular est une capture navigateur, pas un curl.
+- `ng new --skip-git` pour éviter un `.git` imbriqué dans un repo déjà versionné.
+- Le sujet n'exige pas le déploiement du front (A2-Q4/Q5 s'arrêtent à build/test) : dockeriser est un
+  choix de cohérence, pas une contrainte.

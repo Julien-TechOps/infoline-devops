@@ -91,6 +91,56 @@ Le conteneur tourne sous un utilisateur dédié `spring` (créé dans le stage r
 ### Lien avec la suite
 Aujourd'hui l'image reste locale : aucun coût AWS. Phase 3 (A2-Q3) : tag + push vers ECR, puis déploiement sur EKS via pipeline CI/CD.
 
+## Applications Front — Angular (principal + backoffice)
+
+### Ce qui est réalisé
+- Deux applications Angular 22 générées par `ng new` (sans SSR ni routing, page hello world unique) :
+  `apps/frontend/` (« Hello from InfoLine ») et `apps/backoffice/` (« Hello from InfoLine Backoffice »).
+- Chacune dockerisée en multi-stage (`node:24-alpine` → `nginx:1.30-alpine`), servie en statique par
+  nginx. Images `infoline-frontend:local` (port hôte 8081) et `infoline-backoffice:local` (8082).
+
+### Pourquoi le sujet n'exige pas ce déploiement (écart assumé)
+Le sujet ne demande littéralement que l'app Angular hello world (A2-Q4) ; A2-Q5 s'arrête à
+« build/test », sans verbe « déployez » ni infra cible — contrairement à A2-Q3 qui exige
+« déployez sur le kube créé » pour l'API. Kubernetes n'exécutant que des conteneurs, la dockerisation
+de l'API est un **prérequis mécanique** de A2-Q3 ; celle du front ne l'est pas. La containeriser reste
+un **choix de cohérence architecturale** (toute l'archi est conteneurisée), pas une exigence littérale.
+
+### Pourquoi pas de SSR
+Un serveur Node en plus de nginx n'apporterait rien pour un hello world 100 % statique, et casserait
+le principe « nginx sert des fichiers statiques ».
+
+### Pourquoi un Dockerfile multi-stage (même logique que Spring Boot)
+Le build réclame Node/npm/outillage Angular (jetable), l'exécution ne réclame qu'un serveur de
+fichiers statiques. `npm ci` (et non `npm install`) : installation reproductible depuis le lockfile
+exact (esprit fiche B2 P1, « environnement maîtrisé »). Même bénéfice de correction que côté API :
+`docker build` recompile depuis `src/` à chaque fois, une image au code périmé est impossible par
+construction.
+
+### Pourquoi node:24-alpine et nginx:1.30-alpine
+Node 24 = LTS active mi-2026, **même version en local que dans l'image** (rapprochement dev/exécution,
+fiche B2 P1). `nginx:1.30-alpine` = branche stable, poids minimal, aucune dépendance native côté
+conteneur (le garde-fou Alpine de la fiche B2 P3 ne s'applique pas). Tags précis plutôt que `latest`.
+
+### Pourquoi pas d'utilisateur non-root créé à la main (contraste avec Spring Boot)
+L'image nginx officielle fait déjà tourner ses workers sous l'utilisateur non privilégié `nginx` par
+défaut ; seul le process maître démarre en root pour se lier au port 80. Le réflexe de moindre
+privilège est **déjà couvert par l'image de base** — inutile de le recréer comme pour l'API.
+
+### Le piège dist/browser
+Le nouveau build Angular (« application builder », défaut depuis Angular 17) écrit dans
+`dist/<projet>/browser/`, pas `dist/<projet>/`. Le `COPY --from=build` cible donc
+`/app/dist/frontend/browser` — une cible sans `/browser` copierait une arborescence en trop et
+casserait le site.
+
+### Alternative de production non retenue
+En production réelle, un SPA compilé serait plus idiomatique sur **S3 + CloudFront** (facturation à
+l'usage, pas de conteneur à faire tourner en continu). Non retenu ici : le sujet ne demande pas de
+déploiement du front, et introduire un nouveau service AWS pour un hello world ne se justifie pas dans
+le budget-temps. Si le conteneur était un jour déployé sur EKS, il tournerait sur une capacité **déjà
+payée pour l'API** (coût marginal quasi nul) — l'argument « S3 moins cher » suppose un compute payé en
+plus, ce qui n'est pas le cas ici.
+
 ---
 
 ## Choix techniques et pourquoi

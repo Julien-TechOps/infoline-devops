@@ -153,3 +153,61 @@ Contrairement à la Lambda (où Terraform ne relit que le hash d'un jar déjà b
 `docker build` **recompile** le jar depuis `src/` à chaque build : impossible de builder une image
 avec du code périmé. Le seul cache en jeu est celui des couches Docker, qui s'invalide correctement
 dès qu'un fichier de `src/` change.
+
+## Fronts Angular (Docker) — Cycle de vie
+
+Comme l'API Spring Boot : tout est **local**, aucun coût ni appel AWS, donc **aucun `terraform
+destroy`** à prévoir. Deux apps au cycle identique : `frontend` (port 8081) et `backoffice` (8082).
+
+### Prérequis
+- Node.js 24 (LTS) + npm pour tester hors conteneur (`ng serve`, `ng build`). Le build définitif se
+  fait *dans* l'image via `node:24-alpine`.
+- Docker.
+
+### Construire les images
+```bash
+cd apps/frontend   && docker build -t infoline-frontend:local .
+cd ../backoffice   && docker build -t infoline-backoffice:local .
+```
+
+### Lancer et tester
+```bash
+docker run -d -p 8081:80 --name infoline-frontend  infoline-frontend:local
+docker run -d -p 8082:80 --name infoline-backoffice infoline-backoffice:local
+docker ps                                          # mappings 8081->80 et 8082->80
+curl -s http://localhost:8081 | grep '<title>'     # <title>Frontend</title>
+curl -s http://localhost:8082 | grep '<title>'     # <title>Backoffice</title>
+```
+
+### Nettoyer
+```bash
+docker rm -f infoline-frontend infoline-backoffice
+```
+
+### La preuve « parlante » est une capture navigateur, pas curl
+L'app est en **CSR pur** (pas de SSR, choix assumé) : la réponse HTTP de nginx ne contient que la
+coquille `<app-root></app-root>` + un `<script>`. Le texte « Hello from InfoLine » n'est injecté dans
+le DOM qu'**après** exécution du JS par le navigateur — `curl` ne peut donc pas l'afficher (contraste
+avec l'API Spring Boot, qui calcule le texte côté serveur). Preuve retenue :
+`A2-Q4_docker-ps-browser.png` (les deux pages rendues + `docker ps`). `curl … | grep '<title>'`
+prouve seulement que **deux pages différentes** sont servies, pas que le hello world s'affiche.
+
+### Piège : le dossier `browser`
+`ng build` écrit dans `dist/<projet>/browser/`, pas `dist/<projet>/`. Un `COPY` sans `/browser`
+copie une arborescence en trop et casse le site.
+
+### Piège cousin du « jar périmé » : node_modules
+Ne jamais copier `node_modules` depuis l'hôte (binaires natifs esbuild/Rollup spécifiques à
+l'OS/arch — un `node_modules` généré sous WSL/Windows copié dans Alpine casse le build de façon peu
+lisible). Le `.dockerignore` exclut `node_modules`, et `npm ci` le régénère **dans** le conteneur
+avec les bons binaires.
+
+### Piège : `.git` imbriqué
+Générer une app avec `ng new … --skip-git` : le repo `infoline-devops` est déjà versionné, sans ce
+flag `ng new` initialise un second `.git` imbriqué dans `apps/frontend`.
+
+### Piège d'environnement : mise à jour de Docker Desktop en session
+Un update de Docker Desktop peut rendre les conteneurs invisibles pour `docker ps -a`/`docker images`
+(le CLI se reconnecte à un moteur neuf) alors qu'ils répondent encore sur leurs ports (ancien moteur
+toujours actif). Fix : **quitter complètement puis relancer Docker Desktop**. Ne pas mettre à jour
+Docker Desktop pendant qu'un conteneur — ou pire un `terraform apply` — tourne.
