@@ -49,7 +49,9 @@ aws eks describe-cluster-versions \
 ```
 
 ### Détruire (fin de session — obligatoire)
+**Si l'API est déployée (Service `type: LoadBalancer`)** : `kubectl delete -f k8s/` **avant** le `terraform destroy`. Le Classic Load Balancer est créé hors état Terraform ; le laisser tourner pendant le destroy laisse un ELB orphelin dont les ENIs peuvent bloquer la suppression du VPC.
 ```bash
+kubectl delete -f k8s/   # uniquement si l'API a été déployée sur ce cluster
 cd terraform/eks
 terraform destroy
 terraform state list    # doit être vide
@@ -60,6 +62,21 @@ aws ec2 describe-nat-gateways --region eu-west-3 \
 
 ### En cas de "deposed object"
 Normal. Correspond à un cycle create-before-destroy interrompu. Le prochain `apply` nettoie automatiquement. Ne pas lancer de `terraform destroy` en panique.
+
+### Déployer l'API Spring Boot sur le cluster (manuel — avant CI/CD)
+**Prérequis : le cluster doit être UP** (section « Déployer » ci-dessus — ~15-20 min si détruit la veille) et `kubeconfig` à jour. Cette séquence manuelle sera automatisée par le pipeline CircleCI (A2-Q3).
+```bash
+# Image déjà buildée et poussée sur ECR (tag = SHA court du commit) — voir CI/CD (à venir).
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/api-service.yaml
+
+kubectl get pods -w                    # attendre 2/2 Running, puis Ctrl-C
+kubectl get endpoints infoline-api     # doit lister 2 IP:8080 (preuve que les labels matchent)
+kubectl get svc infoline-api -w        # attendre l'EXTERNAL-IP (<pending> ~1-3 min), puis Ctrl-C
+
+curl http://<external-ip-ou-hostname>/hello   # attendu : Hello from InfoLine API
+```
+Ne pas oublier le `kubectl delete -f k8s/` avant le `terraform destroy` du soir (ELB hors IaC — voir « Détruire » ci-dessus).
 
 ---
 

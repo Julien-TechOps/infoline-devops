@@ -17,7 +17,9 @@ Terraform (IaC). Dépôt final le 23 juillet 2026.
   = hello world volontairement triviaux). Le métier ici est l'empaquetage et le déploiement.
   Ne pas proposer d'améliorations non demandées sur ces deux apps.
 - Rappeler de faire `terraform destroy` en fin de session (EKS + node groups coûtent
-  à l'heure sur AWS).
+  à l'heure sur AWS). Corollaires : le réveil coûte un `terraform apply` de ~15-20 min
+  avant tout `kubectl` (à budgéter) ; si un Service `LoadBalancer` tourne,
+  `kubectl delete -f k8s/` avant le destroy (ELB hors IaC — cf. `RUNBOOK.md`).
 - ELK est la techno la moins maîtrisée : lui laisser de la marge dans le planning.
 - Calendrier sans marge réelle (16 jours ouvrés, ~112h) : ne jamais proposer de scope
   creep.

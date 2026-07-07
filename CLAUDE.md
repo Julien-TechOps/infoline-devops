@@ -19,7 +19,10 @@ Terraform (IaC). Dépôt final le 23 juillet 2026.
   développement applicatif. Timeboxer durement, ne pas proposer d'améliorations non
   demandées sur ces deux apps.
 - Toujours rappeler de faire `terraform destroy` en fin de session, le soir et le
-  week-end (EKS + node groups coûtent à l'heure sur AWS).
+  week-end (EKS + node groups coûtent à l'heure sur AWS). Deux corollaires : le réveil
+  coûte un `terraform apply` de ~15-20 min avant tout `kubectl` (à budgéter, non
+  instantané) ; si un Service `LoadBalancer` tourne, `kubectl delete -f k8s/` avant le
+  destroy (l'ELB est créé hors IaC — cf. `RUNBOOK.md`).
 - ELK est la techno la moins maîtrisée du projet : ne pas la sous-estimer, lui laisser
   de la marge.
 - Calendrier sans marge réelle (16 jours ouvrés, ~112h) : ne jamais proposer de scope

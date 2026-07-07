@@ -89,7 +89,30 @@ Le conteneur tourne sous un utilisateur dédié `spring` (créé dans le stage r
 `pom.xml` est copié et les dépendances téléchargées (`dependency:go-offline`) **avant** le code source : un changement de code n'invalide pas la couche (coûteuse) de téléchargement des dépendances. Principe « ce qui change le moins souvent en haut » (fiche B2 P3).
 
 ### Lien avec la suite
-Aujourd'hui l'image reste locale : aucun coût AWS. Phase 3 (A2-Q3) : tag + push vers ECR, puis déploiement sur EKS via pipeline CI/CD.
+L'image est désormais poussée sur ECR (tag = SHA court du commit) et déployée sur EKS — d'abord **manuellement** (section suivante), avant automatisation par pipeline CI/CD (A2-Q3, Phase 3).
+
+## Déploiement de l'API sur EKS
+
+### Ce qui est réalisé
+L'image ECR est déployée sur le cluster EKS de la Phase 1 via deux manifestes versionnés (`k8s/`) : un `Deployment` à 2 replicas et un `Service` `type: LoadBalancer`. Vérifié de bout en bout — `curl http://<elb-dns>/hello` → `Hello from InfoLine API`. Étape faite **à la main** (`kubectl apply`) avant d'être automatisée par le pipeline CI/CD (A2-Q3).
+
+### Pourquoi un déploiement manuel d'abord
+Sentir la friction avant de l'automatiser : ~7 commandes dans un ordre précis, une dépendance invisible (le cluster détruit la veille doit être réveillé par un `terraform apply` de ~15-20 min), et aucune trace de qui a déployé quoi ni quand. Ces trois manques sont exactement la justification du pipeline CircleCI (fiche B2 P4) — on ne peut pas argumenter la valeur du CI/CD sans avoir vécu le déploiement manuel.
+
+### Pourquoi `type: LoadBalancer` (et un Classic Load Balancer)
+`type: LoadBalancer` demande à Kubernetes de provisionner un load balancer cloud qui expose le Service sur un DNS public. Sur EKS **sans** AWS Load Balancer Controller installé, c'est le contrôleur *in-tree* legacy qui répond : il crée un **Classic Load Balancer**, sans rien à installer. Suffisant pour exposer un hello world. Le chemin réel est Internet → ELB (port 80) → NodePort (attribué automatiquement par Kubernetes) → kube-proxy → pod (`targetPort: 8080`) : trois sauts, seuls `port`/`targetPort` configurés à la main. Un ALB/NLB via le contrôleur dédié serait le choix de production (Ingress, HTTPS, path-routing) — non requis ici.
+
+### Pourquoi 2 replicas
+Deux pods sur deux nodes : la perte d'un pod ou d'un node ne coupe pas le service, sans sur-dimensionner un hello world. C'est aussi ce qui rendra un futur *rolling update* visible en CI/CD (un nouveau ReplicaSet monte pendant que l'ancien descend — le hash dans le nom du pod change).
+
+### Pourquoi des probes sur `/hello`
+La `readinessProbe` retire un pod des cibles du Service tant qu'il ne répond pas (évite d'envoyer du trafic à un Spring Boot encore en démarrage) ; la `livenessProbe` redémarre le conteneur s'il se fige. Faute d'endpoint `/actuator/health` dédié (Spring Actuator non ajouté — applicatif trivial), les deux pointent sur `/hello`, le seul endpoint existant. `initialDelaySeconds` couvre le temps de démarrage de la JVM.
+
+### Pourquoi le tag d'image = SHA court du commit
+Le tag ECR est le SHA court du commit (`git rev-parse --short HEAD`), jamais `latest` : chaque image est rattachée à l'état exact du repo qui l'a produite, et un rollback (`kubectl set image`) reste traçable. Contrainte alignée sur ECR configuré en tags **immuables** (un tag ne peut pas être ré-poussé — cf. `FRICTIONS.md`).
+
+### Point de cohérence à traiter en Phase 3
+Le repo ECR a été créé **hors Terraform**, alors que tout le reste de l'infra est en IaC. À intégrer dans la stack Terraform / le pipeline en Phase 3 pour ne pas laisser un maillon hors IaC.
 
 ## Applications Front — Angular (principal + backoffice)
 

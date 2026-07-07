@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infoline-api
+  labels:
+    app: infoline-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: infoline-api
+  template:
+    metadata:
+      labels:
+        app: infoline-api
+    spec:
+      containers:
+        - name: infoline-api
+          image: 247898554480.dkr.ecr.eu-west-3.amazonaws.com/infoline-api:23547c5
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /hello
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /hello
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
