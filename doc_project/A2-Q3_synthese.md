@@ -31,6 +31,16 @@ Cf. `doc_project/backlog.md`, Phase 3.
 - **Captures** : `doc_project/captures/A2-Q3_*` (pods `Running`, `Service` + EXTERNAL-IP, curl ;
   images ECR = capture console à ajouter).
 
+## Écart outil assumé
+
+Le sujet évoque CircleCI ; la copie livre GitHub Actions. Écart assumé et argumenté (comme
+la dockerisation du front en A2-Q4) : blocage account-level CircleCI non imputable au
+candidat (ticket support à l'appui, cf. FRICTIONS.md Jeu 9 juil), résolu par un outil CI/CD
+équivalent et natif à GitHub. La compétence évaluée (automatiser build/test/déploiement sur
+le cluster) est démontrée à l'identique ; seul l'outil change. Pointeurs : workflow dans
+`.github/workflows/`, "pourquoi" dans architecture.md (section CI/CD), infra CI (ECR IaC,
+IAM `infoline-ci`, Access Entry) inchangée.
+
 ## Conformité
 - **Fiche Studi mobilisée** : **B2 P4** (automatiser la mise en production). Ici le déploiement manuel
   est la ligne de base que le pipeline (partie 2/2) automatisera ; la friction manuelle **justifie** le

@@ -412,3 +412,60 @@ premier essai.
 - Tag d'image = SHA du commit, jamais `latest` ; ECR immuable impose un tag neuf par build.
 - Toute session EKS commence par un `terraform apply` (~15-20 min) et, si un Service LoadBalancer
   tourne, se termine par `kubectl delete` avant le destroy : le destroy du soir a un coût aux deux bouts.
+
+---
+
+## Session Mer 8 juil — Phase 3 : mise en place CI/CD (A2-Q3, partie 2/2)
+
+Objectif : automatiser le déploiement de l'API sur EKS via un pipeline. Préparatifs
+d'infra CI menés à bien, mais blocage total sur l'outil CircleCI (voir session suivante).
+
+Réalisé et acquis cette session (réutilisable quel que soit l'outil CI) :
+- ECR passé en IaC : `terraform/ecr/`, ressource `aws_ecr_repository` existante adoptée
+  par `terraform import` (repo infoline-api créé hors IaC en Phase 3 partie 1). Referme le
+  dernier maillon hors-Terraform. Leçon : le bloc `resource` doit répliquer la config
+  réelle AVANT import, sinon `plan` propose de modifier une ressource existante au lieu de
+  l'adopter.
+- Utilisateur IAM CI dédié `infoline-ci` créé via Terraform (`terraform/iam-ci/`), policy
+  au moindre privilège : push/pull ECR + `eks:DescribeCluster` uniquement. Distinct du
+  compte `terraform-ecf` à droits larges — limite le blast radius si les clés CI fuient.
+- Access Entry EKS pour `infoline-ci` (mécanisme moderne EKS, pas `aws-auth` legacy) +
+  policy `AmazonEKSEditPolicy`. Point conceptuel clé : IAM (authentification AWS) et RBAC
+  Kubernetes (autorisation dans le cluster) sont deux couches distinctes ; `eks:Describe
+  Cluster` seul donne un `kubectl ... Unauthorized` tant que l'Access Entry n'existe pas.
+  Vérifié en local en basculant les credentials sur `infoline-ci` : `kubectl get pods`
+  répond sans Unauthorized.
+- Rotation de la clé `infoline-ci` après exposition accidentelle dans une capture (réflexe
+  de sécurité, clé révoquée + régénérée via `terraform apply -replace`).
+- Repo GitHub passé en privé (réduit la surface pendant le développement ; sera rendu
+  accessible au jury au dépôt).
+
+---
+
+## Session Jeu 9 juil — Phase 3 : blocage CircleCI irrésolvable → bascule GitHub Actions
+
+### Friction majeure — CircleCI ne liste aucun repo (problème account-level)
+Symptôme : page Projects CircleCI vide en permanence ("We couldn't find any
+repositories"), donc impossible de configurer le moindre projet ni pipeline.
+Diagnostic mené sur ~2 sessions, méthodique : réinstallation propre de la GitHub App
+(scope "select" puis "All repositories"), révocation OAuth, suppression + recréation
+complète de l'organisation CircleCI, "Refresh permissions", ré-authentification complète
+AVEC vidage des cookies circleci.com, flux alternatif "Add Project" via Pipelines. Aucune
+piste documentée n'a débloqué l'affichage.
+Cause retenue : problème de configuration côté serveur CircleCI propre au compte (leur
+propre assistant reconnaît "not enough information to diagnose an account-level backend
+issue"). Compte GitHub personnel (pas une organisation) → plusieurs pistes standard du
+support inapplicables.
+Résolution : ticket support humain ouvert (investigation account-level demandée) +
+décision de bascule sur GitHub Actions. Justification technique, pas seulement
+contournement : le code est déjà hébergé sur GitHub, donc GitHub Actions est l'outil CI/CD
+natif de la plateforme — aucune intégration OAuth/App tierce à maintenir. Toute l'infra CI
+préparée le 8 juillet (ECR IaC, IAM `infoline-ci`, Access Entry EKS) est réutilisée telle
+quelle, indépendante de l'outil.
+Décision de portabilité : le `.circleci/config.yml` reste versionné dans le repo (non
+connecté, inerte) pour bascule rapide si le support CircleCI débloque le compte. La logique
+du pipeline est identique entre les deux outils ; seuls diffèrent le fichier de config, le
+stockage des secrets et le déclencheur.
+Leçon : couper une piste morte à temps et changer d'outil équivalent est une décision
+d'ingénierie, pas un échec. Le coût d'un débogage sans fin sur un outil tiers dépasse vite
+le coût de la bascule.

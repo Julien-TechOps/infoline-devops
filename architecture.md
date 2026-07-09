@@ -111,8 +111,55 @@ La `readinessProbe` retire un pod des cibles du Service tant qu'il ne répond pa
 ### Pourquoi le tag d'image = SHA court du commit
 Le tag ECR est le SHA court du commit (`git rev-parse --short HEAD`), jamais `latest` : chaque image est rattachée à l'état exact du repo qui l'a produite, et un rollback (`kubectl set image`) reste traçable. Contrainte alignée sur ECR configuré en tags **immuables** (un tag ne peut pas être ré-poussé — cf. `FRICTIONS.md`).
 
-### Point de cohérence à traiter en Phase 3
-Le repo ECR a été créé **hors Terraform**, alors que tout le reste de l'infra est en IaC. À intégrer dans la stack Terraform / le pipeline en Phase 3 pour ne pas laisser un maillon hors IaC.
+### Point de cohérence traité en Phase 3
+Le repo ECR, créé hors Terraform, a été réintégré par `terraform import` — voir section CI/CD ci-dessous (« Pourquoi ECR en IaC ») pour le détail.
+
+## CI/CD
+
+### Pourquoi GitHub Actions (et pas CircleCI comme initialement prévu)
+Le choix initial était CircleCI (accepté par le sujet InfoLine). Après un blocage
+account-level irrésolvable côté CircleCI (repos jamais listés malgré une GitHub App
+correctement installée avec "All repositories" — cf. FRICTIONS.md, session Jeu 9 juil),
+bascule sur GitHub Actions. Justification technique, pas seulement de contournement : le
+code étant déjà hébergé sur GitHub, GitHub Actions est l'outil CI/CD natif de la plateforme
+— aucune intégration OAuth/App tierce à maintenir, le pipeline vit dans le même repo que le
+code (`.github/workflows/`). La logique du pipeline est inchangée par rapport à ce qui était
+conçu pour CircleCI : build+test Maven → build image Docker → push ECR (tag = SHA court du
+commit) → déploiement EKS (`kubectl set image`) → `kubectl rollout status` comme garde-fou
+qui fait échouer le job si le déploiement ne converge pas. L'infra sous-jacente (ECR en IaC,
+utilisateur IAM `infoline-ci`, Access Entry EKS) est réutilisée telle quelle, découplée de
+l'outil CI — ce découplage est en soi une preuve de maturité (pipeline portable).
+
+### Pourquoi un utilisateur IAM CI dédié (`infoline-ci`) et une Access Entry EKS
+Moindre privilège : le CI n'a besoin que de pousser sur ECR et de mettre à jour un
+Deployment. `infoline-ci` porte donc une policy minimale (push/pull ECR +
+`eks:DescribeCluster`), distincte du compte `terraform-ecf` à droits larges — si les clés
+CI fuient, le blast radius est limité. Sur EKS, deux couches d'autorisation cohabitent :
+IAM (authentification AWS) et RBAC Kubernetes (autorisation dans le cluster). Une Access
+Entry (mécanisme moderne EKS, pas `aws-auth` legacy) fait le pont et associe la policy
+`AmazonEKSEditPolicy` à `infoline-ci` ; sans elle, `kubectl` renvoie Unauthorized même avec
+des credentials AWS valides.
+
+### Pourquoi ECR en IaC (référence, pas discipline de coût)
+Le repo ECR a été créé hors Terraform en Phase 3 partie 1 (urgence du premier déploiement
+manuel), puis réintégré par `terraform import`. Contrairement à EKS, ECR n'a pas de cycle
+destroy/apply par session (facturé au stockage, quasi nul, comme Lambda) : l'IaC ici sert
+la traçabilité et la reproductibilité du run final (22 juil), pas une discipline de coût
+quotidienne.
+
+### Amélioration de production non retenue : OIDC
+GitHub Actions permet une authentification AWS sans clés longue durée (OIDC + rôle IAM de
+confiance). Non retenu ici pour respecter le timeboxing (les clés `infoline-ci` étaient
+déjà en place et fonctionnelles) ; noté comme durcissement de production possible, au même
+titre que S3+CloudFront pour le front ou un ALB via contrôleur dédié.
+
+### Pourquoi un script de reconstruction centralisé (RTO) — à faire Phase 5
+Un DevOps doit pouvoir chiffrer le temps de remise en route de l'infra après incident
+(RTO). Un script rejouant apply/destroy dans le bon ordre de dépendance (EKS → Lambda →
+ECR, indépendants entre eux mais tous nécessaires avant le déploiement applicatif) permet
+de mesurer ce chiffre par un run réel. Destroy quotidien (EKS, facturé à l'heure) et
+destroy complet (EKS + Lambda + ECR, fin de projet) volontairement séparés pour ne pas
+détruire par erreur des ressources facturées à l'usage.
 
 ## Applications Front — Angular (principal + backoffice)
 

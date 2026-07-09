@@ -18,7 +18,9 @@ entièrement pilotée en Terraform (IaC).
 - `appflaskmin/` — appli Flask minimale du socle (Phase 0). Hello world volontairement
   triviaux : cf. contrainte de non sur-développement applicatif.
 - `k8s/` — manifests Kubernetes.
-- `.circleci/` — pipelines CI/CD.
+- `.github/workflows/` — pipelines CI/CD (GitHub Actions). `.circleci/config.yml` conservé
+  (inerte) pour bascule éventuelle si le support CircleCI débloque le compte — cf.
+  FRICTIONS.md.
 - `doc_project/` — documentation du projet, voir ci-dessous.
 
 ## Documentation
