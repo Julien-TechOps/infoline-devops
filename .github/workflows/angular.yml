@@ -33,4 +33,4 @@ jobs:
         run: npx ng build
 
       - name: Run tests
-        run: npx ng test --watch=false --browsers=ChromeHeadless
+        run: npx ng test --watch=false
