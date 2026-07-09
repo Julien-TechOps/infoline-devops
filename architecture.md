@@ -13,7 +13,7 @@
 - **Subnets publics** : 10.0.101.0/24, 10.0.102.0/24 — NAT Gateway, futurs Load Balancers
 - **NAT Gateway unique** : sortie Internet pour les nodes privés (single_nat_gateway = true)
 - **Cluster EKS** : infoline-eks, Kubernetes 1.34, région eu-west-3
-- **Node group "main"** : 2x t3.medium ON_DEMAND, min 1 / max 3 (autoscaling)
+- **Node group "main"** : 2x t3.micro ON_DEMAND, min 1 / max 3 (autoscaling)
 
 ### Pourquoi EKS plutôt que Kubernetes auto-installé (kubeadm)
 AWS gère entièrement le **control plane** (API server, etcd, scheduler, controller manager) — zéro maintenance de ces composants, zéro gestion des certificats TLS, haute disponibilité incluse. Ce qui reste sous notre responsabilité : le node group (taille, version, patchs OS) et les workloads déployés.
@@ -23,6 +23,9 @@ Arbitrage coût/résilience cohérent avec le budget limité d'InfoLine. Un NAT 
 
 ### Pourquoi des nodes en subnets privés
 Les nodes ne sont pas directement joignables depuis Internet. Seul le trafic entrant via un Load Balancer (subnet public) ou le NAT Gateway (sortie vers Internet) est autorisé. Réflexe sécurité de base : réduire la surface d'attaque.
+
+### Pourquoi t3.micro (contrainte de compte, pas un choix d'architecture)
+Le type `t3.medium` initialement visé était indisponible sur ce compte AWS de test — repli sur `t3.micro`. C'est une **contrainte de compte assumée**, pas une décision d'architecture (en production réelle, `t3.medium` ou plus serait retenu). Conséquence concrète découverte à l'usage : `t3.micro` plafonne à **4 pods par node** (limite ENI/CNI du VPC AWS, fonction du type d'instance), contre ~17 sur `t3.medium`. Ce plafond borne directement les stratégies de déploiement possibles — il a contraint le rolling update du Deployment `infoline-api` (`k8s/api-deployment.yaml`), cf. `doc_project/FRICTIONS.md`, session Jeu 9 juil.
 
 ### Modules Terraform utilisés
 - `terraform-aws-modules/vpc/aws ~> 5.8` — référence communauté, gère tables de routage, NACL, tags EKS

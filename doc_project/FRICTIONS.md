@@ -477,3 +477,12 @@ Leçon : couper une piste morte à temps et changer d'outil équivalent est une 
 d'ingénierie, pas un échec. Diagnostiquer, escalader (ticket + enseignants), puis trancher
 rationnellement face à un empêchement structurel (modèle de support payant, pas un bug
 transitoire).
+
+### Après-midi — mise en œuvre GitHub Actions
+Même journée, après-midi : le pipeline GitHub Actions décidé le matin est mis en œuvre (build/test Maven → push ECR → déploiement EKS via `kubectl`). Le premier rolling update automatisé a révélé une friction de capacité côté nodes.
+
+### Friction 10 — rolling update `infoline-api` bloqué par la limite de pods du node t3.micro
+**Symptôme :** le rollout du Deployment `infoline-api` restait bloqué indéfiniment en CI (`kubectl rollout status` en timeout après 120 s) ; un pod restait `Pending`, jamais planifié.
+**Cause :** les nodes tournent en `t3.micro` (`t3.medium` indisponible sur ce compte AWS), soit un plafond de 4 pods par node (limite ENI/CNI AWS, fonction du type d'instance). Le `maxSurge` par défaut du rolling update tentait de démarrer un 3ᵉ pod simultané le temps de la bascule ; les deux nodes étant déjà proches de leur plafond, aucun n'avait de place → `0/2 nodes are available: Too many pods`.
+**Résolution :** `maxSurge: 0` / `maxUnavailable: 1` dans `k8s/api-deployment.yaml` : un ancien pod est arrêté avant que le nouveau démarre, garantissant qu'il n'y a jamais plus de 2 pods `infoline-api` en simultané. Le rollout converge alors dans la capacité disponible.
+**Leçon :** la capacité réelle des nodes (`t3.micro`, pas `t3.medium`) n'est pas qu'une contrainte de coût/compte isolée — elle borne directement les stratégies de déploiement possibles. Un rolling update par défaut suppose de la marge pour faire coexister ancien et nouveau pod ; nodes saturés, il faut expliciter `maxSurge`/`maxUnavailable`. Le « pourquoi t3.micro » est documenté dans `architecture.md` (section EKS), pas redupliqué ici.
