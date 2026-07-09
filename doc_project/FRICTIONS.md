@@ -415,7 +415,7 @@ premier essai.
 
 ---
 
-## Session Mer 8 juil — Phase 3 : mise en place CI/CD (A2-Q3, partie 2/2)
+## Session Mer 8 juil — Phase 3 : mise en place infra CI (A2-Q3, partie 2/2)
 
 Objectif : automatiser le déploiement de l'API sur EKS via un pipeline. Préparatifs
 d'infra CI menés à bien, mais blocage total sur l'outil CircleCI (voir session suivante).
@@ -456,16 +456,24 @@ Cause retenue : problème de configuration côté serveur CircleCI propre au com
 propre assistant reconnaît "not enough information to diagnose an account-level backend
 issue"). Compte GitHub personnel (pas une organisation) → plusieurs pistes standard du
 support inapplicables.
-Résolution : ticket support humain ouvert (investigation account-level demandée) +
-décision de bascule sur GitHub Actions. Justification technique, pas seulement
+
+### Suite — support CircleCI (ticket #173426) et arbitrage
+Ticket support ouvert (réf. #173426). Réponse reçue : CircleCI ne garantit aucun délai de
+traitement sans souscription à un plan de support payant. Délai indéterminé incompatible
+avec l'échéance du 23 juillet.
+Décision : bascule sur GitHub Actions actée comme solution **DÉFINITIVE** (pas un
+contournement temporaire en attendant CircleCI). Justification technique, pas seulement
 contournement : le code est déjà hébergé sur GitHub, donc GitHub Actions est l'outil CI/CD
 natif de la plateforme — aucune intégration OAuth/App tierce à maintenir. Toute l'infra CI
 préparée le 8 juillet (ECR IaC, IAM `infoline-ci`, Access Entry EKS) est réutilisée telle
 quelle, indépendante de l'outil.
-Décision de portabilité : le `.circleci/config.yml` reste versionné dans le repo (non
-connecté, inerte) pour bascule rapide si le support CircleCI débloque le compte. La logique
-du pipeline est identique entre les deux outils ; seuls diffèrent le fichier de config, le
-stockage des secrets et le déclencheur.
+Le `.circleci/config.yml` reste versionné dans le repo à titre documentaire (démarche
+initiale + portabilité du pipeline), sans intention de le connecter.
+Conformité : message posté sur le forum Studi (enseignants DevOps) pour valider l'écart
+d'outil sur A2-Q3/A2-Q5 (le sujet cite CircleCI), en précisant que la compétence évaluée —
+automatiser build/test/déploiement sur le cluster — est démontrée à l'identique avec GitHub
+Actions. Poursuite sur GitHub Actions en attendant leur retour.
 Leçon : couper une piste morte à temps et changer d'outil équivalent est une décision
-d'ingénierie, pas un échec. Le coût d'un débogage sans fin sur un outil tiers dépasse vite
-le coût de la bascule.
+d'ingénierie, pas un échec. Diagnostiquer, escalader (ticket + enseignants), puis trancher
+rationnellement face à un empêchement structurel (modèle de support payant, pas un bug
+transitoire).

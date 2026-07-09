@@ -117,10 +117,11 @@ Le repo ECR, créé hors Terraform, a été réintégré par `terraform import` 
 ## CI/CD
 
 ### Pourquoi GitHub Actions (et pas CircleCI comme initialement prévu)
-Le choix initial était CircleCI (accepté par le sujet InfoLine). Après un blocage
+Le choix initial était CircleCI (cité par le sujet InfoLine). Après un blocage
 account-level irrésolvable côté CircleCI (repos jamais listés malgré une GitHub App
-correctement installée avec "All repositories" — cf. FRICTIONS.md, session Jeu 9 juil),
-bascule sur GitHub Actions. Justification technique, pas seulement de contournement : le
+correctement installée avec "All repositories" — cf. FRICTIONS.md, session Jeu 9 juil) et
+un support inaccessible sans plan payant (ticket #173426), bascule sur GitHub Actions.
+Justification technique, pas seulement de contournement : le
 code étant déjà hébergé sur GitHub, GitHub Actions est l'outil CI/CD natif de la plateforme
 — aucune intégration OAuth/App tierce à maintenir, le pipeline vit dans le même repo que le
 code (`.github/workflows/`). La logique du pipeline est inchangée par rapport à ce qui était
@@ -128,7 +129,8 @@ conçu pour CircleCI : build+test Maven → build image Docker → push ECR (tag
 commit) → déploiement EKS (`kubectl set image`) → `kubectl rollout status` comme garde-fou
 qui fait échouer le job si le déploiement ne converge pas. L'infra sous-jacente (ECR en IaC,
 utilisateur IAM `infoline-ci`, Access Entry EKS) est réutilisée telle quelle, découplée de
-l'outil CI — ce découplage est en soi une preuve de maturité (pipeline portable).
+l'outil CI — ce découplage est en soi une preuve de maturité (pipeline portable entre deux
+outils).
 
 ### Pourquoi un utilisateur IAM CI dédié (`infoline-ci`) et une Access Entry EKS
 Moindre privilège : le CI n'a besoin que de pousser sur ECR et de mettre à jour un

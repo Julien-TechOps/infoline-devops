@@ -19,8 +19,8 @@ entièrement pilotée en Terraform (IaC).
   triviaux : cf. contrainte de non sur-développement applicatif.
 - `k8s/` — manifests Kubernetes.
 - `.github/workflows/` — pipelines CI/CD (GitHub Actions). `.circleci/config.yml` conservé
-  (inerte) pour bascule éventuelle si le support CircleCI débloque le compte — cf.
-  FRICTIONS.md.
+  (inerte) à titre documentaire — bascule depuis CircleCI suite à blocage account-level,
+  cf. FRICTIONS.md.
 - `doc_project/` — documentation du projet, voir ci-dessous.
 
 ## Documentation

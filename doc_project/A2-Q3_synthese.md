@@ -33,9 +33,10 @@ Cf. `doc_project/backlog.md`, Phase 3.
 
 ## Écart outil assumé
 
-Le sujet évoque CircleCI ; la copie livre GitHub Actions. Écart assumé et argumenté (comme
-la dockerisation du front en A2-Q4) : blocage account-level CircleCI non imputable au
-candidat (ticket support à l'appui, cf. FRICTIONS.md Jeu 9 juil), résolu par un outil CI/CD
+Le sujet cite CircleCI ; la copie livre GitHub Actions. Écart assumé et argumenté (comme la
+dockerisation du front en A2-Q4) : blocage account-level CircleCI non imputable au candidat,
+support inaccessible sans plan payant (ticket #173426, cf. FRICTIONS.md Jeu 9 juil),
+validation d'écart demandée aux enseignants sur le forum Studi. Résolu par un outil CI/CD
 équivalent et natif à GitHub. La compétence évaluée (automatiser build/test/déploiement sur
 le cluster) est démontrée à l'identique ; seul l'outil change. Pointeurs : workflow dans
 `.github/workflows/`, "pourquoi" dans architecture.md (section CI/CD), infra CI (ECR IaC,
