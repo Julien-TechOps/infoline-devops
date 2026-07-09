@@ -66,6 +66,9 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
 
+      - name: Apply Kubernetes manifests
+        run: kubectl apply -f k8s/ 
+
       - name: Deploy new image
         run: kubectl set image deployment/infoline-api infoline-api=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
