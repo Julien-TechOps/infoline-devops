@@ -108,6 +108,9 @@ Sentir la friction avant de l'automatiser : ~7 commandes dans un ordre précis, 
 ### Pourquoi 2 replicas
 Deux pods sur deux nodes : la perte d'un pod ou d'un node ne coupe pas le service, sans sur-dimensionner un hello world. C'est aussi ce qui rendra un futur *rolling update* visible en CI/CD (un nouveau ReplicaSet monte pendant que l'ancien descend — le hash dans le nom du pod change).
 
+### Pourquoi `maxSurge: 0` / `maxUnavailable: 1` (rolling update séquentiel)
+La stratégie de rolling update par défaut (`maxSurge: 25 %`, soit +1 pod pendant la bascule) suppose de la marge pour faire coexister l'ancien et le nouveau pod. Impossible sur des nodes `t3.micro` déjà proches de leur plafond de 4 pods (cf. « Pourquoi t3.micro ») : le pod surnuméraire reste `Pending` (`Too many pods`). Fixé à `maxSurge: 0` / `maxUnavailable: 1` — les 2 replicas se remplacent **un à la fois**, jamais plus de 2 pods simultanés. Contrepartie assumée : le rollout devient **séquentiel** donc plus lent (~90-110 s, démarrage JVM + readiness par pod), ce qui impose un `--timeout` de 240 s côté pipeline (le garde-fou `kubectl rollout status` échouerait sinon sur un déploiement pourtant sain — cf. `FRICTIONS.md`, Friction 10). Un node plus grand (`t3.medium`+) rendrait le rolling update parallèle par défaut viable.
+
 ### Pourquoi des probes sur `/hello`
 La `readinessProbe` retire un pod des cibles du Service tant qu'il ne répond pas (évite d'envoyer du trafic à un Spring Boot encore en démarrage) ; la `livenessProbe` redémarre le conteneur s'il se fige. Faute d'endpoint `/actuator/health` dédié (Spring Actuator non ajouté — applicatif trivial), les deux pointent sur `/hello`, le seul endpoint existant. `initialDelaySeconds` couvre le temps de démarrage de la JVM.
 
@@ -129,11 +132,23 @@ code étant déjà hébergé sur GitHub, GitHub Actions est l'outil CI/CD natif 
 — aucune intégration OAuth/App tierce à maintenir, le pipeline vit dans le même repo que le
 code (`.github/workflows/`). La logique du pipeline est inchangée par rapport à ce qui était
 conçu pour CircleCI : build+test Maven → build image Docker → push ECR (tag = SHA court du
-commit) → déploiement EKS (`kubectl set image`) → `kubectl rollout status` comme garde-fou
-qui fait échouer le job si le déploiement ne converge pas. L'infra sous-jacente (ECR en IaC,
-utilisateur IAM `infoline-ci`, Access Entry EKS) est réutilisée telle quelle, découplée de
-l'outil CI — ce découplage est en soi une preuve de maturité (pipeline portable entre deux
-outils).
+commit) → déploiement EKS (substitution de l'image dans le manifeste puis `kubectl apply`) →
+`kubectl rollout status` comme garde-fou qui fait échouer le job si le déploiement ne converge
+pas. L'infra sous-jacente (ECR en IaC, utilisateur IAM `infoline-ci`, Access Entry EKS) est
+réutilisée telle quelle, découplée de l'outil CI — ce découplage est en soi une preuve de
+maturité (pipeline portable entre deux outils).
+
+Pipeline **validé vert de bout en bout** (10 juil) : build/test/déploiement de l'API + build/test des
+deux fronts Angular, rolling update réel prouvé (nouveau ReplicaSet, ancien retiré) — captures et
+détail dans `doc_project/A2-Q3_synthese.md` / `A2-Q5_synthese.md`.
+
+### Pourquoi l'image du Deployment est un placeholder substitué en CI
+Le manifeste `k8s/api-deployment.yaml` porte `image: IMAGE_PLACEHOLDER`, pas une référence ECR en dur.
+Le pipeline substitue la vraie référence (`<compte>.dkr.ecr…/infoline-api:<SHA>`, construite depuis les
+secrets GitHub) juste avant `kubectl apply`. Deux bénéfices : (1) l'ACCOUNT_ID n'est plus commité en
+clair dans un fichier suivi (le repo devient public pour le jury) ; (2) le manifeste est **agnostique du
+compte/registre**, rejouable ailleurs sans modification. Le déploiement et la mise à jour d'image se
+font en une seule opération (`apply`) — le `kubectl set image` séparé n'est plus nécessaire.
 
 ### Pourquoi un utilisateur IAM CI dédié (`infoline-ci`) et une Access Entry EKS
 Moindre privilège : le CI n'a besoin que de pousser sur ECR et de mettre à jour un

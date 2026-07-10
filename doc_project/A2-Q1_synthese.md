@@ -24,8 +24,7 @@ d'être conteneurisée à partir d'une image Java officielle (cf. `A2-Q2_synthes
   - `api/src/main/resources/application.properties` — `server.port=8080`
 - Captures : `doc_project/captures/A2-Q1_curl-local-v1.png`, `A2-Q1_curl-local-v2.png`
   (application lancée en local + réponse HTTP 200 sur `/hello`)
-- Reproduction : `RUNBOOK.md`, section « API Spring Boot (Docker) », sous-section
-  « Lancer sans Docker ».
+- Reproduction : `RUNBOOK.md`, §5.1 « API Spring Boot (Docker) », bloc « Lancer sans Docker ».
 
 ## Le choix du port (« un port de votre choix »)
 

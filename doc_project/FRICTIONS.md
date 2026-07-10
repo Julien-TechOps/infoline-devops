@@ -486,3 +486,38 @@ Même journée, après-midi : le pipeline GitHub Actions décidé le matin est m
 **Cause :** les nodes tournent en `t3.micro` (`t3.medium` indisponible sur ce compte AWS), soit un plafond de 4 pods par node (limite ENI/CNI AWS, fonction du type d'instance). Le `maxSurge` par défaut du rolling update tentait de démarrer un 3ᵉ pod simultané le temps de la bascule ; les deux nodes étant déjà proches de leur plafond, aucun n'avait de place → `0/2 nodes are available: Too many pods`.
 **Résolution :** `maxSurge: 0` / `maxUnavailable: 1` dans `k8s/api-deployment.yaml` : un ancien pod est arrêté avant que le nouveau démarre, garantissant qu'il n'y a jamais plus de 2 pods `infoline-api` en simultané. Le rollout converge alors dans la capacité disponible.
 **Leçon :** la capacité réelle des nodes (`t3.micro`, pas `t3.medium`) n'est pas qu'une contrainte de coût/compte isolée — elle borne directement les stratégies de déploiement possibles. Un rolling update par défaut suppose de la marge pour faire coexister ancien et nouveau pod ; nodes saturés, il faut expliciter `maxSurge`/`maxUnavailable`. Le « pourquoi t3.micro » est documenté dans `architecture.md` (section EKS), pas redupliqué ici.
+
+**Suite — timeout du rollout porté de 120 s à 240 s (conséquence assumée, pas un contournement) :** une fois `maxSurge: 0` en place, le blocage de capacité (« Too many pods ») disparaît, mais le rollout devient **séquentiel** : les 2 replicas se remplacent un à la fois, chacun devant démarrer la JVM Spring Boot puis passer la readinessProbe (`initialDelaySeconds: 10`) avant la bascule suivante. La convergence prend ~90-110 s, ce qui dépassait le `--timeout=120s` du step « Wait for rollout to complete » (`.github/workflows/deploy.yml`) → `1 of 2 updated replicas are available… timed out waiting for the condition`. Diagnostic tranché avant de corriger : `kubectl rollout status --timeout=180s` en local renvoie `successfully rolled out` (2 pods `1/1 Running`) — ce n'est pas un pod qui échoue, seulement un timeout trop court. Fix : `--timeout` porté à **240 s**. Marge assumée qui couvre le pire cas du rollout séquentiel imposé par la capacité réduite des nodes t3.micro, pas un pansement sur un déploiement cassé.
+
+---
+
+## Session Ven 10 juil — Phase 3 : clôture (preuve du rolling update, durcissement, RUNBOOK)
+
+Session de clôture : capture de la preuve reine du déploiement continu, durcissement du manifeste, et consolidation du RUNBOOK de bout en bout. Aucune friction bloquante.
+
+### Durcissement — ACCOUNT_ID sorti du manifeste (placeholder + substitution CI)
+`k8s/api-deployment.yaml` codait en dur la référence ECR complète (ACCOUNT_ID en clair), gênant avant un repo public. Remplacé par `IMAGE_PLACEHOLDER`, substitué par la vraie référence (depuis les secrets GitHub) juste avant `kubectl apply` — ce qui fusionne au passage les steps `apply` + `set image`. Le bloc `import` du module ECR (`terraform/ecr/`), son adoption terminée, a été retiré (un rebuild from-scratch passe désormais par `create`). Validé vert au commit `e96fac6`. « Pourquoi » consigné dans `architecture.md`.
+
+### Preuve reine capturée — rolling update réel
+Rolling update automatisé prouvé : hash ReplicaSet `5b6f7c7895` → `955fc7c6` (nouveau ReplicaSet, ancien retiré) + `successfully rolled out` + `curl` ELB → `Hello from InfoLine API`. Rollout **séquentiel** confirmé de deux façons (`maxSurge: 0`) : logs `1 out of 2 new replicas have been updated…` et écart d'âge des deux pods (~58 s), pas de bascule simultanée.
+
+### Friction mineure — `jq` absent (test Lambda)
+`curl … | jq .` (§2.5 RUNBOOK) échouait faute de `jq` installé, **avalant la sortie du `curl`** (route API Gateway non vérifiée alors que l'invoke direct passait). Résolu : `jq` marqué **optionnel** dans le RUNBOOK, `curl` brut en commande principale. Leçon : un test de route ne doit pas dépendre d'un formateur — robustesse pour le run final (machine du jury sans `jq`).
+
+### Friction mineure — transcript `-w` perdu (séquences terminal)
+La capture du flux `kubectl get pods -w` (état PENDANT) a été polluée par des séquences d'échappement du terminal intégré VS Code au copier-coller. Contourné sans refaire de déploiement : la preuve avant/après (hash changé) + l'écart d'âge des pods suffisent à la définition de la preuve reine. Réflexe pour la suite : rediriger avec `| tee -a fichier.md` plutôt que copier-coller un flux `-w`.
+
+### RUNBOOK réécrit de bout en bout
+`RUNBOOK.md` refondu : provisioning IaC ordonné (ECR → IAM-CI → secrets GitHub → EKS+Access Entry → Lambda) → déploiement continu CI/CD (avec marqueurs de captures Phase 3) → cycles locaux → vérif → destroy → pièges. Sert le run final reproductible **et** la validation Phase 3.
+
+## CE QUI EST ACQUIS — PHASE 3 (CI/CD)
+- Pipeline GitHub Actions build/test/déploiement API → EKS vert de bout en bout ; build/test des 2 fronts Angular (matrice, Vitest). Bascule assumée depuis CircleCI (outil équivalent, écart soumis aux enseignants).
+- Deux couches d'autorisation EKS distinctes : IAM (authentification) vs RBAC/Access Entry (autorisation dans le cluster), versionnées en Terraform.
+- Rolling update lu et prouvé : ReplicaSet (hash), `maxSurge`/`maxUnavailable`, rollout séquentiel imposé par la capacité des nodes (t3.micro), garde-fou `rollout status` à timeout dimensionné.
+- Manifeste k8s agnostique du compte (placeholder substitué en CI) — pas d'ACCOUNT_ID en dur.
+- ECR et IAM-CI en IaC, permanents (non détruits chaque soir), distincts d'EKS (détruit quotidiennement).
+
+## POINTS DE VIGILANCE POUR LA SUITE (Phase 4 — ELK)
+- ELK est la techno la moins maîtrisée : lui laisser de la marge (cf. CLAUDE.md).
+- La supervision (A3) répond à l'exigence du sujet « monitorer + notifier » — sur les **logs** K8s, pas des métriques.
+- Réveil du cluster ~15-20 min avant tout `kubectl` : à budgéter en début de session ELK.

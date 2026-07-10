@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** Mar 7 juil 2026
+**Dernière mise à jour :** Ven 10 juil 2026
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -17,7 +17,9 @@ Phase 2 Spring Boot terminée (Ven 3 juil) : API Spring Boot 4.1 / Java 21 (`api
 Phase 2 Angular terminée (Lun 6 juil) : deux apps Angular 22 hello world (`apps/frontend/` + `apps/backoffice/`), dockerisées multi-stage `node:24-alpine` → `nginx:1.30-alpine`, servies en local sur 8081/8082, rendu vérifié au navigateur. Couvre A2-Q4 (synthèse créée). Écart cadré : le sujet n'exige pas le déploiement du front (dockerisation = choix de cohérence, cf. `A2-Q4_synthese.md`).
 Phase 3 démarrée (Mar 7 juil) : API Spring Boot déployée **manuellement** sur EKS — image ECR (tag = SHA court `23547c5`), manifestes versionnés (`k8s/api-deployment.yaml` 2 replicas + `k8s/api-service.yaml` LoadBalancer), `curl http://<elb-dns>/hello` OK de bout en bout. Couvre A2-Q3 partie 1/2 (déploiement) ; partie 2/2 (pipeline CircleCI) à venir. Friction structurante : le cluster détruit la veille impose un `terraform apply` (~15-20 min) en début de session.
 Prochaine session (8-10 juil) : Phase 3 — pipelines CircleCI (A2-Q3 build/test/deploy API → EKS automatisé, A2-Q5 build/test Angular). Point à traiter : passer le repo ECR en IaC.
-Jeu 9 juil : infra CI en place (ECR IaC, IAM `infoline-ci`, Access Entry EKS vérifiée), blocage CircleCI → bascule GitHub Actions **définitive** (support payant seul, ticket #173426), écart soumis aux enseignants Studi, `.circleci/config.yml` conservé inerte. Reste à faire : écrire `.github/workflows/deploy.yml`, poser les secrets GitHub, premier run, vérif par changement de hash ReplicaSet.
+Jeu 9 juil (matin) : infra CI en place (ECR IaC, IAM `infoline-ci`, Access Entry EKS désormais **versionnée en Terraform** — `terraform/eks/access-entries.tf`), blocage CircleCI → bascule GitHub Actions **définitive** (support payant seul, ticket #173426), écart soumis aux enseignants Studi, `.circleci/config.yml` conservé inerte.
+Jeu 9 juil (après-midi, en avance sur la roadmap qui plaçait ce bloc au Ven 10) : `.github/workflows/deploy.yml` écrit (job `build-test` `mvn verify` + job `build-push-deploy` : ECR login → build/push image tag SHA court → `kubectl apply` → `kubectl set image` → `kubectl rollout status`) et `.github/workflows/angular.yml` (build/test des 2 fronts, **vert**). Friction de capacité résolue : nodes `t3.micro` (t3.medium indispo sur ce compte) → `maxSurge: 0` / `maxUnavailable: 1` dans `k8s/api-deployment.yaml`, puis `--timeout` du rollout porté à 240 s (rollout séquentiel plus lent — cf. FRICTIONS.md Friction 10). Reste à faire : run GitHub Actions vert de bout en bout + **preuve reine** (capture `kubectl get pods` avant/après montrant le hash ReplicaSet changé + `curl` ELB → « Hello from InfoLine API »), captures `A2-Q3_*`, MAJ `A2-Q3_synthese.md`.
+Ven 10 juil : Phase 3 **clôturée**. Durcissement : ACCOUNT_ID sorti du manifeste (`IMAGE_PLACEHOLDER` + substitution CI, fusion `apply`+`set image`) et bloc `import` ECR retiré (adoption terminée) — commit `e96fac6`. **Preuve reine capturée** : pipeline vert, rolling update réel (hash `5b6f7c7895`→`955fc7c6`, séquentiel), `curl` ELB OK. `RUNBOOK.md` réécrit de bout en bout (provisioning IaC → CI/CD) ; synthèses A2-Q3 + **A2-Q5 (créée)** à jour. Reste avant Phase 4 : commit/push de la doc + `terraform destroy`.
 
 ## Avancement par phase
 
@@ -28,7 +30,7 @@ Jeu 9 juil : infra CI en place (ECR IaC, IAM `infoline-ci`, Access Entry EKS vé
 | Jeu 2 juil | Phase 1 — Lambda | A1-Q1 (2/2) | Lambda + API Gateway en Terraform | ✅ | ✅ | ✅ |
 | Ven 3 juil | Phase 2 — Spring Boot | A2-Q1 · A2-Q2 | API Spring Boot dockerisée | ✅ | ✅ | ✅ |
 | Lun 6 juil | Phase 2 — Angular | A2-Q4 | Apps Angular (frontend + backoffice) dockerisées | ✅ | ✅ | ✅ |
-| 7-10 juil | Phase 3 — CI/CD | A2-Q3 · A2-Q5 | Pipelines GitHub Actions (bascule depuis CircleCI, cf. FRICTIONS) build/test/deploy sur EKS (A2-Q3 déploiement manuel fait, pipeline à venir) | 🔶 | 🔶 | 🔶 |
+| 7-10 juil | Phase 3 — CI/CD | A2-Q3 · A2-Q5 | Pipelines GitHub Actions (bascule depuis CircleCI, cf. FRICTIONS) build/test/deploy sur EKS — vert de bout en bout, rolling update prouvé | ✅ | ✅ | ✅ |
 | 13-15 juil | Phase 4 — ELK | A3-Q1 · A3-Q2 | Elasticsearch + Kibana sur logs K8s | ❌ | ❌ | ❌ |
 | 16 juil | Tampon technique | Selon trous | Absorber le dérapage le plus probable (ELK/CircleCI) | ❌ | — | — |
 | 17 juil | Phase 5 — Doc archi | Toutes | Schéma d'architecture complet + repo Git propre | — | ❌ | — |

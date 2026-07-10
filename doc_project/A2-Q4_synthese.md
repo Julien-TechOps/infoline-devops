@@ -25,7 +25,7 @@
     `ng build` réussis (bundle, output location).
   - `doc_project/captures/A2-Q4_docker-ps-browser.png` — `docker ps` (mappings 8081/8082) + les deux
     pages rendues dans le navigateur (preuve « parlante » du hello world).
-- Reproduction : `RUNBOOK.md`, section « Fronts Angular (Docker) — Cycle de vie ».
+- Reproduction : `RUNBOOK.md`, §5.2 « Fronts Angular (Docker) ».
 
 ## Pourquoi ces choix
 

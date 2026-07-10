@@ -1,163 +1,260 @@
-# RUNBOOK — Build / Destroy / Redeploy
+# RUNBOOK — Déploiement de bout en bout (infra IaC → CI/CD)
 
-## Prérequis
-- AWS CLI configuré (`aws sts get-caller-identity` répond), région `eu-west-3`.
-- Terraform >= 1.5.
-- `kubectl` (cluster EKS).
-- Java 21 (OpenJDK) + Maven (build du jar Lambda).
-- `jq` (lisibilité des réponses `curl` en test).
+Procédure complète et reproductible : provisionner l'infrastructure en Terraform, puis
+déployer l'API en continu via GitHub Actions. Sert deux objectifs : **rejouer le run final**
+(dépôt du 22 juil) et **valider la Phase 3** (les étapes portant un marqueur 📸 / 💾 produisent
+une preuve à déposer dans `doc_project/captures/`).
 
-## Build complet (from scratch)
-Composants indépendants (state Terraform séparé), ordre indifférent entre eux :
-1. **EKS** — voir "Cluster EKS — Cycle de vie / Déployer" ci-dessous.
-2. **Lambda** — voir "Lambda — Cycle de vie / Déployer" ci-dessous.
-
-## Destroy (fin de session / soir / week-end)
-**`terraform/eks` : destroy obligatoire.** Control plane facturé à l'heure (~0.10$/h)
-qu'il soit utilisé ou non.
-
-**`terraform/lambda-login` : destroy PAS nécessaire chaque soir.** Lambda + API Gateway
-HTTP API sont facturés à l'usage, quasi nul au repos (cf. `architecture.md`). Détruire
-seulement en fin de projet ou si inutilisé sur une longue période.
-
-## Vérification post-déploiement
-Pour chaque composant : `terraform state list` (ressources trackées) **+** au moins un
-appel AWS CLI en lecture directe (`aws lambda get-function`, `aws eks describe-cluster`,
-etc.) pour prouver que les ressources existent réellement côté AWS, pas seulement dans
-le state. Détail par composant dans les sections "Vérifier" ci-dessous.
+> **Marqueurs de preuve**
+> 📸 **Capture** = screenshot à enregistrer. 💾 **Transcript** = sortie terminal à coller dans un `.md`.
+> ⚠️ **Floutage systématique** de l'`ACCOUNT_ID` (12 chiffres) → `<ACCOUNT_ID>` et **jamais** de clé
+> réelle dans une capture (cf. `doc_project/FRICTIONS.md`, F7 + rotation clé `infoline-ci`).
+> Récupérer l'account ID : `aws sts get-caller-identity --query Account --output text`.
 
 ---
 
-## Cluster EKS — Cycle de vie
+## 0. Vue d'ensemble
 
-### Déployer
+| Composant | Module Terraform | Détruit chaque soir ? | Rôle |
+|---|---|---|---|
+| VPC + Cluster EKS + Access Entry CI | `terraform/eks/` | **OUI** (facturé à l'heure) | Exécute l'API |
+| Registre d'images ECR | `terraform/ecr/` | non (stockage quasi nul) | Stocke les images de l'API |
+| Utilisateur IAM `infoline-ci` | `terraform/iam-ci/` | non (sinon clés à re-régler) | Identité du pipeline CI |
+| Lambda login + API Gateway | `terraform/lambda-login/` | non (facturé à l'usage) | Login serverless (indépendant) |
+
+**Deux chemins de déploiement de l'API :**
+- **Nominal — CI/CD (§3)** : un push sur `main` déclenche GitHub Actions (build/test → push ECR →
+  substitution de l'image + `kubectl apply` → `rollout status`).
+- **Secours — manuel (§4)** : `kubectl apply` à la main. Pour debug ou pipeline indisponible.
+
+**Dépendances pour que le CI/CD fonctionne :** cluster EKS **UP** + ECR + Access Entry CI (incluse
+dans l'apply EKS) + secrets GitHub renseignés. Le Lambda est indépendant (login), sans lien avec le
+déploiement de l'API.
+
+**Réveil de session :** EKS est détruit chaque soir → chaque matin, `terraform apply` dans
+`terraform/eks/` (**~15-20 min**) **avant** tout `kubectl` ou tout déclenchement du pipeline.
+
+---
+
+## 1. Prérequis
+
+- **AWS CLI** configuré (compte `terraform-ecf`, droits larges), région `eu-west-3` —
+  `aws sts get-caller-identity` répond.
+- **Terraform** ≥ 1.6.
+- **kubectl** (pilotage du cluster EKS).
+- **Docker** (build local des images ; le CI build les siennes).
+- **Java 21 (OpenJDK) + Maven** (build du jar Lambda ; build local optionnel de l'API).
+- **Node.js 24 + npm** (build/test local optionnel des fronts).
+- **jq** *(optionnel — confort de lecture des réponses `curl` ; les tests passent sans)*.
+- **Accès GitHub** au repo + droit de gérer les *Actions secrets* (pour le CI, §2.3). `gh` CLI pratique.
+
+---
+
+## 2. Provisionner l'infrastructure (IaC)
+
+States Terraform **séparés** (un par module). Les composants sont indépendants ; l'ordre entre eux
+est libre. Pour **activer le CI/CD**, il faut au minimum **ECR (§2.1) + IAM-CI (§2.2) + secrets (§2.3)
++ EKS (§2.4)**. Le Lambda (§2.5) est optionnel pour le déploiement de l'API.
+
+### 2.1 ECR — registre d'images (permanent, ne PAS détruire chaque soir)
+Le repo `infoline-api` existe déjà côté AWS (créé hors IaC en Phase 3, puis **adopté** par le bloc
+`import` de `terraform/ecr/main.tf`). L'apply est idempotent si le state est présent.
+```bash
+cd terraform/ecr
+terraform init
+terraform plan          # attendu : 0 to change (repo déjà adopté) ; sinon adoption via import
+terraform apply
+```
+Vérifier :
+```bash
+aws ecr describe-repositories --repository-names infoline-api --region eu-west-3 --no-cli-pager
+```
+> Facturé au stockage (quasi nul) : **jamais** de `terraform destroy` quotidien. Tags **immuables** :
+> un tag ne peut pas être ré-poussé → un tag neuf par build (SHA court du commit).
+
+### 2.2 Utilisateur IAM CI `infoline-ci` (permanent)
+Crée l'utilisateur, sa clé d'accès et sa policy minimale (push/pull ECR + `eks:DescribeCluster`).
+```bash
+cd terraform/iam-ci
+terraform init
+terraform apply
+```
+Récupérer les identifiants (à reporter dans les secrets GitHub, §2.3) :
+```bash
+terraform output ci_access_key_id
+terraform output -raw ci_secret_access_key   # ⚠️ secret — ne jamais committer ni capturer
+```
+Vérifier :
+```bash
+aws iam get-user --user-name infoline-ci --no-cli-pager
+```
+> Ne PAS détruire chaque soir : un destroy régénère des clés → il faudrait re-renseigner les secrets
+> GitHub à chaque cycle.
+
+### 2.3 Secrets GitHub (une seule fois, ou après rotation de clé)
+Repo GitHub → **Settings → Secrets and variables → Actions**, créer trois secrets consommés par
+`.github/workflows/deploy.yml` :
+- `AWS_ACCESS_KEY_ID` = sortie `ci_access_key_id` (§2.2)
+- `AWS_SECRET_ACCESS_KEY` = sortie `ci_secret_access_key` (§2.2)
+- `AWS_ACCOUNT_ID` = l'account ID (12 chiffres)
+
+En CLI (équivalent) :
+```bash
+gh secret set AWS_ACCESS_KEY_ID     -b "$(cd terraform/iam-ci && terraform output -raw ci_access_key_id)"
+gh secret set AWS_SECRET_ACCESS_KEY -b "$(cd terraform/iam-ci && terraform output -raw ci_secret_access_key)"
+gh secret set AWS_ACCOUNT_ID        -b "$(aws sts get-caller-identity --query Account --output text)"
+```
+
+### 2.4 Cluster EKS + VPC + Access Entry CI (DÉTRUIT chaque soir)
+Vérifier d'abord les versions supportées si `versions.tf`/`terraform.tfvars` n'a pas été touché depuis
+longtemps :
+```bash
+aws eks describe-cluster-versions \
+  --query "clusterVersions[?status=='STANDARD_SUPPORT'].clusterVersion" --output table
+```
+Provisionner (~15-20 min : control plane ~10-15 min, puis le node group rejoint) :
 ```bash
 cd terraform/eks
-terraform init          # une seule fois, ou après changement de module
+terraform init                               # une seule fois, ou après changement de module
 terraform plan -no-color -out=tfplan
 terraform show -no-color tfplan > plan.txt   # relire avant d'appliquer
 terraform apply tfplan
 aws eks update-kubeconfig --region eu-west-3 --name infoline-eks
-kubectl get nodes       # vérifier 2 nodes Ready
+kubectl get nodes                            # attendu : 2 nodes Ready (v1.34)
 ```
-
-### Vérifier les versions disponibles (à faire si version.tf n'a pas été touché depuis longtemps)
+Cet apply crée **aussi** l'Access Entry de `infoline-ci` (`terraform/eks/access-entries.tf`,
+policy `AmazonEKSEditPolicy`) : le pipeline CI est autorisé côté RBAC **automatiquement**, sans
+commande manuelle. Vérifier :
 ```bash
-aws eks describe-cluster-versions \
-  --query "clusterVersions[?status=='STANDARD_SUPPORT'].clusterVersion" \
-  --output table
+aws eks list-access-entries --cluster-name infoline-eks --region eu-west-3 --no-cli-pager
+# doit lister le principal .../infoline-ci en plus des rôles de service et de terraform-ecf
 ```
+> **Nodes en `t3.micro`** (t3.medium indisponible sur ce compte) = 4 pods/node max — d'où
+> `maxSurge: 0` sur le Deployment (cf. §8 et FRICTIONS F10).
 
-### Détruire (fin de session — obligatoire)
-**Si l'API est déployée (Service `type: LoadBalancer`)** : `kubectl delete -f k8s/` **avant** le `terraform destroy`. Le Classic Load Balancer est créé hors état Terraform ; le laisser tourner pendant le destroy laisse un ELB orphelin dont les ENIs peuvent bloquer la suppression du VPC.
+### 2.5 Lambda login + API Gateway (permanent, indépendant)
+Le jar doit être **compilé avant** l'apply (Terraform ne compile pas le Java) :
 ```bash
-kubectl delete -f k8s/   # uniquement si l'API a été déployée sur ce cluster
-cd terraform/eks
-terraform destroy
-terraform state list    # doit être vide
-aws eks list-clusters --region eu-west-3          # doit être vide
-aws ec2 describe-nat-gateways --region eu-west-3 \
-  --filter "Name=state,Values=available"          # doit être vide
+mvn -f lambda-login package
+cd terraform/lambda-login
+terraform init
+terraform plan
+terraform apply
+terraform output invoke_url
+terraform output function_name
 ```
-
-### En cas de "deposed object"
-Normal. Correspond à un cycle create-before-destroy interrompu. Le prochain `apply` nettoie automatiquement. Ne pas lancer de `terraform destroy` en panique.
-
-### Déployer l'API Spring Boot sur le cluster (manuel — avant CI/CD)
-**Prérequis : le cluster doit être UP** (section « Déployer » ci-dessus — ~15-20 min si détruit la veille) et `kubeconfig` à jour. Cette séquence manuelle sera automatisée par le pipeline CircleCI (A2-Q3).
+Tester :
 ```bash
-# Image déjà buildée et poussée sur ECR (tag = SHA court du commit) — voir CI/CD (à venir).
-kubectl apply -f k8s/api-deployment.yaml
+curl -s "$(terraform output -raw invoke_url)"; echo    # JSON brut ; ajouter « | jq . » si jq installé
+aws lambda invoke --function-name "$(terraform output -raw function_name)" \
+  --payload '{}' --cli-binary-format raw-in-base64-out response.json && cat response.json
+```
+> Facturé à l'usage (quasi nul au repos) : destroy **seulement** en fin de projet (voir §7).
+
+---
+
+## 3. Déploiement continu de l'API (CI/CD — chemin nominal)
+
+Le déploiement de l'API sur EKS est **automatisé** par `.github/workflows/deploy.yml`. Aucune commande
+`kubectl` à taper à la main dans le flux nominal.
+
+### 3.1 Déclenchement et séquence du pipeline
+Tout **push sur `main`** lance deux workflows :
+- **`Deploy API to EKS`** (`deploy.yml`) : `build-test` (`mvn verify`) → `build-push-deploy`
+  (configure AWS creds → login ECR → `docker build`/tag = SHA court/push → `aws eks update-kubeconfig`
+  → substitution de l'image (`IMAGE_PLACEHOLDER` → `<ECR>/infoline-api:<SHA>`) → `kubectl apply -f k8s/`
+  → `kubectl rollout status --timeout=240s`, garde-fou qui fait échouer le job si le déploiement ne
+  converge pas).
+- **`Build & Test Angular Apps`** (`angular.yml`) : matrice `frontend`/`backoffice`, `npm ci` →
+  `npx ng build` → `npx ng test --watch=false`. **Pas de déploiement** (le sujet A2-Q5 s'arrête à
+  build/test).
+
+### 3.2 Prérequis d'un déploiement réussi
+- Cluster EKS **UP** (§2.4) — sinon `update-kubeconfig`/`kubectl` échouent.
+- ECR + Access Entry CI présents (§2.1 / §2.4) + secrets GitHub (§2.3).
+- Sur un cluster fraîchement recréé (matin), il est **vide** : le premier run du pipeline substitue
+  l'image (`IMAGE_PLACEHOLDER` → ECR au SHA courant) puis crée le Deployment/Service
+  (`kubectl apply -f k8s/`).
+
+### 3.3 Séquence de validation Phase 3 (à filmer, cluster UP)
+
+**Étape 0 — cluster prêt** (§2.4 : `kubectl get nodes` → 2 Ready).
+
+**Étape 1 — premier déploiement (état initial stable)**
+- Déclencher un run : push d'un commit (ou *Re-run* du workflow depuis l'onglet Actions).
+- Attendre les **deux workflows verts**.
+  - 📸 **Capture** `A2-Q3_pipeline-green.png` — run *Deploy API to EKS* vert.
+  - 📸 **Capture** `A2-Q5_pipeline-green.png` — run *Build & Test Angular Apps* vert (matrice 2 apps).
+  - 📸 **Capture** `A2-Q5_build-test-logs.png` — logs des steps *Build* + *Run tests* (`ng build` /
+    `ng test --watch=false`) des deux apps.
+- Noter l'état initial :
+  ```bash
+  kubectl get pods -o wide         # relever le hash ReplicaSet (image SHA « A »)
+  ```
+
+**Étape 2 — film du rolling update (déploiement frais)**
+> Un rolling update n'est visible qu'au **2ᵉ** déploiement (l'état initial doit être stable). D'où
+> l'étape 1 puis un commit no-op ici.
+- Commit **no-op** (ex. bump d'un commentaire) + push `main` → nouvelle image (SHA « B »).
+- Filmer la bascule dans un même terminal :
+  ```bash
+  kubectl get pods -w                                   # nouveau hash monte, ancien descend
+  kubectl rollout status deployment/infoline-api        # → « successfully rolled out »
+  ```
+  - 💾 **Transcript** `A2-Q3_rollout-transcript.md` — avant / pendant / après, **hash ReplicaSet qui
+    change** (SHA A → SHA B) + `successfully rolled out`.
+  - 📸 **Capture** *(optionnel, renforce)* `A2-Q3_deploy-job-logs.png` — logs des steps
+    *Substitute image and apply manifests* + *Wait for rollout to complete*.
+
+**Étape 3 — preuve fonctionnelle (le service répond après déploiement auto)**
+```bash
+kubectl get svc infoline-api                 # relever l'EXTERNAL-IP (hostname ELB)
+curl http://<elb-dns>/hello                  # attendu : Hello from InfoLine API
+```
+- 💾 **Transcript** `A2-Q3_curl-after-deploy.md` — `curl` → `Hello from InfoLine API`.
+- ⚠️ Flouter l'`ACCOUNT_ID` dans **toutes** ces captures/transcripts avant dépôt.
+
+---
+
+## 4. Déploiement manuel de l'API (secours / référence)
+
+À utiliser si le pipeline est indisponible, ou pour du debug. **Cluster UP requis** (§2.4).
+```bash
+# Le manifeste versionné porte IMAGE_PLACEHOLDER (pas d'ACCOUNT_ID en dur). Substituer l'image réelle
+# à l'apply — repo ECR + tag = SHA court d'un commit déjà présent sur ECR (sinon, laisser le CI/CD la produire) :
+IMAGE=<ACCOUNT_ID>.dkr.ecr.eu-west-3.amazonaws.com/infoline-api:<SHA>
+sed "s|IMAGE_PLACEHOLDER|$IMAGE|" k8s/api-deployment.yaml | kubectl apply -f -
 kubectl apply -f k8s/api-service.yaml
 
 kubectl get pods -w                    # attendre 2/2 Running, puis Ctrl-C
 kubectl get endpoints infoline-api     # doit lister 2 IP:8080 (preuve que les labels matchent)
 kubectl get svc infoline-api -w        # attendre l'EXTERNAL-IP (<pending> ~1-3 min), puis Ctrl-C
-
 curl http://<external-ip-ou-hostname>/hello   # attendu : Hello from InfoLine API
 ```
-Ne pas oublier le `kubectl delete -f k8s/` avant le `terraform destroy` du soir (ELB hors IaC — voir « Détruire » ci-dessus).
+> Le chemin **nominal** est le CI/CD (§3). Cette section est le fallback. Ne pas oublier le
+> `kubectl delete -f k8s/` avant le `terraform destroy` du soir (ELB hors IaC — §7).
 
 ---
 
-## Lambda "login" + API Gateway — Cycle de vie
+## 5. Cycles de vie locaux (dev, hors AWS — aucun coût)
 
-### Déployer
-```bash
-# 1. Construire le jar AVANT terraform apply (Terraform ne compile pas le Java)
-mvn -f lambda-login package
+Utiles pour valider l'applicatif **hors** chaîne AWS (A2-Q1/Q2 et A2-Q4). Aucun `terraform destroy`
+à prévoir.
 
-# 2. Provisionner
-cd terraform/lambda-login
-terraform init          # une seule fois, ou après changement de provider
-terraform plan
-terraform apply
-
-terraform output invoke_url
-terraform output function_name
-```
-
-### Tester
-```bash
-curl -s "$(terraform output -raw invoke_url)" | jq .
-
-aws lambda invoke --function-name "$(terraform output -raw function_name)" \
-  --payload '{}' --cli-binary-format raw-in-base64-out response.json && cat response.json
-```
-
-### Vérifier (preuve que les ressources existent réellement côté AWS)
-```bash
-terraform state list
-aws lambda get-function --function-name infoline-login --no-cli-pager
-aws iam get-role --role-name infoline-login-exec-role --no-cli-pager
-aws iam list-attached-role-policies --role-name infoline-login-exec-role --no-cli-pager
-aws apigatewayv2 get-apis --query "Items[?Name=='infoline-login-api']" --no-cli-pager
-```
-
-### Détruire (pas obligatoire chaque soir — voir "Destroy" plus haut)
-```bash
-cd terraform/lambda-login
-terraform destroy
-terraform state list    # doit être vide
-```
-
-### Piège à connaître : jar pas régénéré
-`terraform plan`/`apply` ne lisent jamais `LoginHandler.java`, seulement le hash du
-`.jar` déjà sur disque (`filebase64sha256`). Après toute modification du handler,
-relancer `mvn -f lambda-login package` **avant** `terraform apply` — sinon `plan`
-affiche `0 to change` sans erreur ni avertissement, et l'ancien code reste déployé.
-
----
-
-## API Spring Boot (Docker) — Cycle de vie
-
-Tout est **local** : aucun appel ni coût AWS, donc **aucun `terraform destroy`** à prévoir pour ce
-composant. (Le push vers ECR et le déploiement EKS arrivent en Phase 3.)
-
-### Prérequis
-- Docker. Le build compile le jar *dans* l'image via `maven:3.9-eclipse-temurin-21` — pas besoin de
-  Maven sur l'hôte pour construire l'image.
-
-### Construire l'image
+### 5.1 API Spring Boot (Docker)
 ```bash
 cd api
 docker build -t infoline-api:local .
-```
-
-### Lancer et tester
-```bash
 docker run -d -p 8080:8080 --name infoline-api infoline-api:local
-docker ps                        # vérifier le mapping 0.0.0.0:8080->8080/tcp
-docker logs infoline-api         # vérifier "Started ApiApplication ... in X seconds"
-curl -i http://localhost:8080/hello   # attendu : HTTP 200, "Hello from InfoLine API"
+docker ps                              # mapping 0.0.0.0:8080->8080/tcp
+docker logs infoline-api               # « Started ApiApplication ... »
+curl -i http://localhost:8080/hello    # HTTP 200, « Hello from InfoLine API »
+docker stop infoline-api && docker rm infoline-api   # nettoyage
 ```
+> `docker build` **recompile** le jar depuis `src/` à chaque build : pas de piège « jar périmé »
+> (contraste avec la Lambda, §8).
 
-### Nettoyer (entre deux itérations sur le Dockerfile)
-```bash
-docker stop infoline-api && docker rm infoline-api
-```
-
-### Lancer sans Docker (débogage applicatif rapide)
+**Lancer sans Docker (débogage applicatif rapide, prouve l'app sur son port — A2-Q1) :**
 ```bash
 cd api
 mvn spring-boot:run                                   # mode dev
@@ -165,66 +262,84 @@ mvn spring-boot:run                                   # mode dev
 mvn package -DskipTests && java -jar target/*.jar
 ```
 
-### Pas de piège « jar périmé » ici (contraste avec la Lambda)
-Contrairement à la Lambda (où Terraform ne relit que le hash d'un jar déjà buildé — voir plus haut),
-`docker build` **recompile** le jar depuis `src/` à chaque build : impossible de builder une image
-avec du code périmé. Le seul cache en jeu est celui des couches Docker, qui s'invalide correctement
-dès qu'un fichier de `src/` change.
-
-## Fronts Angular (Docker) — Cycle de vie
-
-Comme l'API Spring Boot : tout est **local**, aucun coût ni appel AWS, donc **aucun `terraform
-destroy`** à prévoir. Deux apps au cycle identique : `frontend` (port 8081) et `backoffice` (8082).
-
-### Prérequis
-- Node.js 24 (LTS) + npm pour tester hors conteneur (`ng serve`, `ng build`). Le build définitif se
-  fait *dans* l'image via `node:24-alpine`.
-- Docker.
-
-### Construire les images
+### 5.2 Fronts Angular (Docker)
 ```bash
 cd apps/frontend   && docker build -t infoline-frontend:local .
 cd ../backoffice   && docker build -t infoline-backoffice:local .
-```
-
-### Lancer et tester
-```bash
 docker run -d -p 8081:80 --name infoline-frontend  infoline-frontend:local
 docker run -d -p 8082:80 --name infoline-backoffice infoline-backoffice:local
 docker ps                                          # mappings 8081->80 et 8082->80
 curl -s http://localhost:8081 | grep '<title>'     # <title>Frontend</title>
 curl -s http://localhost:8082 | grep '<title>'     # <title>Backoffice</title>
+docker rm -f infoline-frontend infoline-backoffice # nettoyage
 ```
+> **CSR pur** : la preuve « parlante » du hello world est une **capture navigateur**, pas un `curl`
+> (le texte est injecté par le JS après chargement). Cf. `A2-Q4_docker-ps-browser.png`.
 
-### Nettoyer
+---
+
+## 6. Vérification post-déploiement (preuve d'existence réelle côté AWS)
+
+Pour chaque composant : `terraform state list` **+** au moins un appel AWS CLI en lecture directe
+(pas seulement le state).
 ```bash
-docker rm -f infoline-frontend infoline-backoffice
+# EKS
+cd terraform/eks && terraform state list
+aws eks describe-cluster --name infoline-eks --region eu-west-3 --query "cluster.status" --no-cli-pager
+# ECR
+aws ecr describe-repositories --repository-names infoline-api --region eu-west-3 --no-cli-pager
+# IAM-CI
+aws iam get-user --user-name infoline-ci --no-cli-pager
+# Lambda
+aws lambda get-function --function-name infoline-login --no-cli-pager
+aws apigatewayv2 get-apis --query "Items[?Name=='infoline-login-api']" --no-cli-pager
 ```
 
-### La preuve « parlante » est une capture navigateur, pas curl
-L'app est en **CSR pur** (pas de SSR, choix assumé) : la réponse HTTP de nginx ne contient que la
-coquille `<app-root></app-root>` + un `<script>`. Le texte « Hello from InfoLine » n'est injecté dans
-le DOM qu'**après** exécution du JS par le navigateur — `curl` ne peut donc pas l'afficher (contraste
-avec l'API Spring Boot, qui calcule le texte côté serveur). Preuve retenue :
-`A2-Q4_docker-ps-browser.png` (les deux pages rendues + `docker ps`). `curl … | grep '<title>'`
-prouve seulement que **deux pages différentes** sont servies, pas que le hello world s'affiche.
+---
 
-### Piège : le dossier `browser`
-`ng build` écrit dans `dist/<projet>/browser/`, pas `dist/<projet>/`. Un `COPY` sans `/browser`
-copie une arborescence en trop et casse le site.
+## 7. Détruire (fin de session / soir / week-end)
 
-### Piège cousin du « jar périmé » : node_modules
-Ne jamais copier `node_modules` depuis l'hôte (binaires natifs esbuild/Rollup spécifiques à
-l'OS/arch — un `node_modules` généré sous WSL/Windows copié dans Alpine casse le build de façon peu
-lisible). Le `.dockerignore` exclut `node_modules`, et `npm ci` le régénère **dans** le conteneur
-avec les bons binaires.
+**`terraform/eks` : destroy OBLIGATOIRE chaque soir** (control plane ~0,10 $/h + nodes EC2).
+**Si l'API est déployée** (Service `type: LoadBalancer`) : `kubectl delete -f k8s/` **avant** le
+destroy — le Classic Load Balancer est créé **hors** état Terraform ; le laisser tourner laisse un ELB
+orphelin dont les ENIs peuvent bloquer la suppression du VPC.
+```bash
+kubectl delete -f k8s/                 # uniquement si l'API a été déployée sur ce cluster
+cd terraform/eks
+terraform destroy
+terraform state list                   # doit être vide
+aws eks list-clusters --region eu-west-3                                   # doit être vide
+aws ec2 describe-nat-gateways --region eu-west-3 \
+  --filter "Name=state,Values=available"                                  # doit être vide
+```
+**`ecr` / `iam-ci` / `lambda-login` : PAS de destroy quotidien** (stockage/usage quasi nul). Détruire
+**seulement en fin de projet** :
+```bash
+cd terraform/lambda-login && terraform destroy   # login serverless
+cd ../ecr                 && terraform destroy   # ⚠️ supprime les images poussées
+cd ../iam-ci              && terraform destroy   # ⚠️ invalide les clés → secrets GitHub à re-régler
+```
+> `terraform/s3-test/` (bucket de test Phase 0) : détruire s'il traîne encore
+> (`cd terraform/s3-test && terraform destroy`).
 
-### Piège : `.git` imbriqué
-Générer une app avec `ng new … --skip-git` : le repo `infoline-devops` est déjà versionné, sans ce
-flag `ng new` initialise un second `.git` imbriqué dans `apps/frontend`.
+---
 
-### Piège d'environnement : mise à jour de Docker Desktop en session
-Un update de Docker Desktop peut rendre les conteneurs invisibles pour `docker ps -a`/`docker images`
-(le CLI se reconnecte à un moteur neuf) alors qu'ils répondent encore sur leurs ports (ancien moteur
-toujours actif). Fix : **quitter complètement puis relancer Docker Desktop**. Ne pas mettre à jour
-Docker Desktop pendant qu'un conteneur — ou pire un `terraform apply` — tourne.
+## 8. Pièges connus (consolidés)
+
+- **Réveil du cluster ~15-20 min** avant tout `kubectl`/CI : à budgéter chaque matin après le destroy.
+- **`deposed object` (EKS)** : normal (cycle create-before-destroy interrompu), le prochain `apply`
+  nettoie. Ne pas paniquer avec un `destroy`.
+- **Rolling update sur `t3.micro`** : `maxSurge: 0` / `maxUnavailable: 1` (4 pods/node) + rollout
+  séquentiel plus lent → `--timeout=240s` côté pipeline (cf. FRICTIONS F10).
+- **Jar Lambda périmé** : `plan`/`apply` ne relisent que le hash du `.jar` (`filebase64sha256`), jamais
+  `LoginHandler.java`. Relancer `mvn -f lambda-login package` **avant** `terraform apply`, sinon
+  `0 to change` sans erreur et ancien code déployé.
+- **Pas de piège « jar périmé » côté API Docker** : `docker build` recompile depuis `src/`.
+- **ECR tags immuables** : un tag ne peut pas être ré-poussé → un tag neuf (SHA court) par build.
+- **Version EKS retirée du catalogue** : vérifier les versions supportées (§2.4) avant un apply si le
+  code n'a pas tourné depuis longtemps.
+- **Docker Desktop mis à jour en session** : conteneurs « fantômes » (CLI reconnecté à un moteur neuf).
+  Quitter/relancer Docker Desktop. Ne pas updater pendant qu'un conteneur ou un `apply` tourne.
+- **Fronts Angular** : `COPY` doit cibler `dist/<projet>/browser` (pas `dist/<projet>`) ; ne jamais
+  copier `node_modules` de l'hôte (`.dockerignore` + `npm ci`) ; générer avec `ng new --skip-git`
+  (éviter un `.git` imbriqué).

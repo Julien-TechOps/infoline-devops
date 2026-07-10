@@ -22,7 +22,7 @@
     (couches visibles : `dependency:go-offline` 36 s isolé, `package` 3,7 s)
   - `doc_project/captures/A2-Q2_docker-ps-logs-curl.png` — `docker ps` (mapping de port),
     `docker logs` (démarrage Spring), `curl` HTTP 200
-- Reproduction : `RUNBOOK.md`, section « API Spring Boot (Docker) ».
+- Reproduction : `RUNBOOK.md`, §5.1 « API Spring Boot (Docker) ».
 
 ## Pourquoi ces choix
 

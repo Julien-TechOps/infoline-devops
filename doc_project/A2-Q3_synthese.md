@@ -1,8 +1,8 @@
 # A2-Q3 — Script build/test + déploiement de l'API Spring Boot sur le kube
 
-*Déploiement de l'API sur le cluster EKS provisionné en Phase 1. Statut au 7 juillet 2026 :
-partie 1/2 (déploiement manuel) faite ; partie 2/2 (pipeline CircleCI qui automatise la séquence)
-prévue le 8 juillet.*
+*Déploiement de l'API sur le cluster EKS provisionné en Phase 1. Statut au 10 juillet 2026 :
+partie 1/2 (déploiement manuel) faite ; partie 2/2 (pipeline qui automatise la séquence) réalisée
+en **GitHub Actions**, vert de bout en bout — bascule assumée depuis CircleCI, cf. « Écart outil assumé ».*
 
 ## Réponse apportée
 
@@ -17,19 +17,33 @@ Image de l'API poussée sur ECR puis déployée sur le cluster EKS via deux mani
   `curl http://<elb-dns>/hello` → `Hello from InfoLine API`. Chemin complet
   Internet → ELB(80) → NodePort → pod(8080).
 
-### Partie 2/2 — pipeline CircleCI (prévu 8 juillet) ⏳
-Automatiser cette séquence manuelle : build Maven → test → build image → push ECR → `kubectl apply`.
-Cf. `doc_project/backlog.md`, Phase 3.
+### Partie 2/2 — pipeline GitHub Actions (10 juillet) ✅
+La séquence manuelle est automatisée dans `.github/workflows/deploy.yml` : job `build-test`
+(`mvn verify`), puis job `build-push-deploy` (configure AWS credentials → ECR login →
+`docker build`/tag = SHA court/push → `aws eks update-kubeconfig` → **substitution de l'image**
+(`IMAGE_PLACEHOLDER` → réf ECR construite depuis les secrets) → `kubectl apply -f k8s/` →
+`kubectl rollout status --timeout=240s` comme garde-fou qui fait échouer le job si le déploiement
+ne converge pas). L'infra CI (ECR IaC, IAM `infoline-ci`, Access Entry EKS versionnée dans
+`terraform/eks/access-entries.tf`) est réutilisée telle quelle depuis CircleCI. Deux frictions de
+capacité traitées (cf. `FRICTIONS.md`, Friction 10) : `maxSurge: 0` / `maxUnavailable: 1` (nodes
+t3.micro = 4 pods/node), puis `--timeout` du rollout porté à 240 s (rollout séquentiel plus lent).
+**Preuve reine capturée** (commit `e96fac6`) : pipeline vert, rolling update réel (hash ReplicaSet
+`5b6f7c7895` → `955fc7c6`, remplacement séquentiel confirmé par les logs `1 out of 2…` et l'écart
+d'âge des pods), et `curl` ELB → `Hello from InfoLine API` après déploiement automatique.
 
 ## Pointeurs
 - **Code / manifestes** : `k8s/api-deployment.yaml`, `k8s/api-service.yaml`.
-- **Procédure de (re)déploiement** : `RUNBOOK.md`, section « Déployer l'API Spring Boot sur le cluster ».
+- **Procédure de (re)déploiement** : `RUNBOOK.md`, §3 (déploiement continu CI/CD — chemin nominal)
+  et §4 (déploiement manuel de secours).
 - **Pourquoi ces choix** (LoadBalancer, 2 replicas, probes sur `/hello`, Classic LB, tag SHA,
   déploiement manuel d'abord) : `architecture.md`, section « Déploiement de l'API sur EKS ».
-- **Frictions** : `doc_project/FRICTIONS.md`, session du 7 juillet (réveil du cluster, ECR immutable,
-  ECR hors IaC, lecture des transitions de pods).
-- **Captures** : `doc_project/captures/A2-Q3_*` (pods `Running`, `Service` + EXTERNAL-IP, curl ;
-  images ECR = capture console à ajouter).
+- **Frictions** : `doc_project/FRICTIONS.md` — 7 juil (réveil cluster, ECR immutable, transitions de
+  pods), Jeu 9 juil (bascule CircleCI → GitHub Actions, Friction 10 rollout/t3.micro), Ven 10 juil
+  (substitution image, preuve du rolling update).
+- **Captures** : `doc_project/captures/A2-Q3_*` — partie 1 (manuel, 7 juil) : `pods-running.md`,
+  `svc-loadbalancer.md`, `curl-hello.md`, `ecr-images.png` ; partie 2 (pipeline, 10 juil) :
+  `pipeline-green.png`, `rollout-transcript.md` (hash A→B), `deploy-job-logs.png` (rollout séquentiel),
+  `curl-after-deploy.md`.
 
 ## Écart outil assumé
 
@@ -52,11 +66,12 @@ IAM `infoline-ci`, Access Entry) inchangée.
     reconsidérer si Ingress/HTTPS requis.
   - **Probes sur `/hello`** faute d'endpoint `/actuator/health` dédié (Spring Actuator non ajouté —
     applicatif volontairement trivial).
-  - **Repo ECR créé hors IaC** : le reste du projet est en Terraform ; le repo ECR n'a pas (encore)
-    de `aws_ecr_repository`. À intégrer avec le pipeline en Phase 3 pour rester cohérent « tout en IaC ».
+  - **Repo ECR** : initialement créé hors IaC (partie 1/2, urgence du premier déploiement),
+    **réintégré par `terraform import`** (`terraform/ecr/`) — dernier maillon hors-Terraform refermé.
+    Cf. `architecture.md` « Pourquoi ECR en IaC ».
 
 ## Statut
 
-| | Manifestes | Déploiement EKS | Pipeline CircleCI | Doc | Captures |
+| | Manifestes | Déploiement EKS | Pipeline GitHub Actions | Doc | Captures |
 |---|---|---|---|---|---|
-| A2-Q3 | ✅ versionnés | ✅ manuel (curl OK) | ⏳ 8 juil | 🔶 partie 1 faite | 🔶 ECR à ajouter |
+| A2-Q3 | ✅ versionnés | ✅ manuel + auto (curl OK) | ✅ vert (`e96fac6`) | ✅ parties 1-2 | ✅ rolling update prouvé |
