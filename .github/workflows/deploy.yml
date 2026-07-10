@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'doc_project/**'
 
 jobs:
   build-test:
