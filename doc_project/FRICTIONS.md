@@ -549,7 +549,18 @@ ECK 3.4.1 + Elasticsearch 9.4.3 + Filebeat 9.4.3 **verts du premier coup**. `nod
 - Sécurité ES activée par défaut (TLS auto-signé + auth) gérée par ECK ; accès par `kubectl port-forward` + `curl -k -u elastic:$PW`.
 - Contrainte Free Tier des types d'instance cartographiée (m7i-flex.large / c7i-flex.large éligibles) — voir aussi mémoire projet + RUNBOOK §8.
 
-## POINTS DE VIGILANCE POUR LA SUITE (A3-Q2 — Kibana)
-- Déployer Kibana (CRD ECK) connecté à `infoline-es`. S'il est exposé en `LoadBalancer`, il crée un **2e ELB hors Terraform** à `kubectl delete` avant `terraform destroy` (cf. RUNBOOK §7) ; l'alternative `port-forward` évite l'ELB et son coût.
-- Pour des requêtes KQL **parlantes** (erreurs, login, latence), déployer l'API `infoline-api` afin de générer des logs applicatifs réalistes (elle n'est pas déployée sur un cluster fraîchement recréé).
+### Friction 12 — Filebeat 9.x : autodiscover+hints génère une configuration invalide
+**Symptôme :** la configuration autodiscover avec hints ne collectait pas de façon fiable tous les logs et déclenchait l'erreur `more than one namespace configured` lorsque Filebeat activait le module Elasticsearch.
+**Cause :** en 9.x, les hints peuvent produire plusieurs sections de configuration incompatibles pour un même input. Cette abstraction ajoutait ici de la complexité alors que le besoin est simplement de lire tous les fichiers de conteneurs du nœud.
+**Résolution :** remplacement par un input unique `filestream` sur `/var/log/containers/*.log`, parser `container`, suivi de `add_kubernetes_metadata`. Les symlinks sont explicitement suivis. Le DaemonSet est resté vert (2/2) et les logs de `kube-system`, ECK, Elasticsearch, Filebeat et Kibana sont devenus interrogeables dans Discover.
+**Leçon :** partir du flux Kubernetes réel (fichiers du nœud → enrichissement → ES) donne ici une configuration plus explicite et robuste que l'autodiscover par hints.
+
+## CE QUI EST ACQUIS — PHASE 4 (A3-Q2)
+- Kibana 9.4.3 géré par ECK, `HEALTH green`, relié à `infoline-es` par `elasticsearchRef` ; accès local par port-forward, donc aucun ELB supplémentaire.
+- Data view `filebeat-*` sur `@timestamp` et Discover validés avec des logs Kubernetes réels.
+- Recherches KQL prouvées : erreurs, `certificate_unknown`, namespace, pod, `stderr`, critères combinés ; analyse par fenêtre temporelle également capturée.
+- Frontières assumées : login Lambda dans CloudWatch, hors collecte Filebeat ; pas de champ de latence dans les hello-world.
+
+## POINTS DE VIGILANCE POUR LA SUITE
 - Index Filebeat en `yellow` (réplica non plaçable en mono-nœud) = normal, pas un bug.
+- L'alerting actif reste hors périmètre ; la preuve ECF porte sur la visibilité et la recherche des dysfonctionnements dans Kibana.

@@ -29,9 +29,10 @@ défaut depuis Stack 8+). Ressource passée à `PHASE: Ready` en ~55 s.
 
 ### Partie 3/3 — Filebeat (DaemonSet) et preuve de connexion au cluster ✅
 CR `k8s/elk/filebeat.yaml` appliqué : ServiceAccount + ClusterRole/Binding (lecture de l'API k8s), CRD
-`Beat` en `daemonSet`, autodiscover Kubernetes, montages `hostPath` sur `/var/log/containers`,
-`/var/log/pods`, `/var/lib/docker/containers`. `elasticsearchRef` → ECK câble seul le TLS et les
-credentials vers `infoline-es`.
+`Beat` en `daemonSet`, input `filestream` sur `/var/log/containers/*.log`, parser `container` et processeur
+`add_kubernetes_metadata`, avec montages `hostPath` sur `/var/log/containers`, `/var/log/pods` et
+`/var/lib/docker/containers`. `elasticsearchRef` → ECK câble seul le TLS et les credentials vers
+`infoline-es`.
 - **Vérifié — DaemonSet** : `kubectl get beat` → `HEALTH green`, `AVAILABLE 2 / EXPECTED 2` ;
   `kubectl get pods -l beat.k8s.elastic.co/name=infoline-filebeat -o wide` → **exactement 2 pods, un par
   nœud** (démonstration concrète du DaemonSet). Preuve : `A3-Q1_filebeat-daemonset`.

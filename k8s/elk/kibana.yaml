@@ -1,0 +1,20 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: infoline-kibana
+  namespace: default
+spec:
+  version: 9.4.3                 # même version que Elasticsearch et Filebeat
+  count: 1
+  elasticsearchRef:
+    name: infoline-es            # ECK monte seul le CA TLS + les credentials d'ES dans le pod Kibana
+  podTemplate:
+    spec:
+      containers:
+      - name: kibana
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 500m
+          limits:
+            memory: 1536Mi

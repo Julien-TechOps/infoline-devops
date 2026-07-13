@@ -240,7 +240,8 @@ plus, ce qui n'est pas le cas ici.
 ### Ce qui est réalisé
 - **Opérateur ECK 3.4.1** (Elastic Cloud on Kubernetes) installé dans le namespace `elastic-system` — apprend au cluster les types `Elasticsearch`, `Kibana`, `Beat` (CRD) et les réconcilie.
 - **Elasticsearch 9.4.3**, single-node (`count: 1`), stockage `emptyDir`, `node.store.allow_mmap: false`, TLS + authentification câblés automatiquement par ECK. Manifeste : `k8s/elk/elasticsearch.yaml`.
-- **Filebeat 9.4.3** en **DaemonSet** (1 pod par nœud), autodiscover Kubernetes, montages `hostPath` sur `/var/log/containers` et `/var/log/pods`, sortie vers `infoline-es` (TLS/credentials injectés par ECK via `elasticsearchRef`). Manifeste : `k8s/elk/filebeat.yaml` (avec ServiceAccount + ClusterRole/Binding).
+- **Filebeat 9.4.3** en **DaemonSet** (1 pod par nœud), input `filestream` sur `/var/log/containers/*.log` puis enrichissement `add_kubernetes_metadata`, montages `hostPath` sur `/var/log/containers` et `/var/log/pods`, sortie vers `infoline-es` (TLS/credentials injectés par ECK via `elasticsearchRef`). Manifeste : `k8s/elk/filebeat.yaml` (avec ServiceAccount + ClusterRole/Binding).
+- **Kibana 9.4.3**, un pod géré par ECK et relié à `infoline-es` par `elasticsearchRef`. Une data view `filebeat-*` sur `@timestamp` alimente Discover ; plusieurs recherches KQL sur les erreurs, pods, namespaces, flux et fenêtres temporelles sont vérifiées. Manifeste : `k8s/elk/kibana.yaml`.
 - Manifests isolés dans **`k8s/elk/`** (jamais `k8s/`), appliqués **manuellement** — pour ne pas être embarqués par le `kubectl apply -f k8s/` du pipeline CI de l'API.
 
 ### Pourquoi superviser par les LOGS et pas des métriques
@@ -250,10 +251,13 @@ Le sujet demande de « monitorer l'état des applications et d'envoyer des notif
 Le sujet nomme explicitement **Elasticsearch et Kibana**. C'est aussi cohérent avec le choix « logs » ci-dessus : Prometheus/Grafana est l'outillage des métriques, ELK celui des logs.
 
 ### Pourquoi l'opérateur ECK plutôt que des manifests bruts ou Helm
-ELK est la techno la moins maîtrisée du projet ; l'opérateur supprime la source de friction la plus élevée en câblant seul le TLS, les mots de passe et le lien ES↔Filebeat (et ES↔Kibana à venir). Pas de Helm : l'outil n'est utilisé nulle part ailleurs dans le projet, l'introduire pour une seule brique ajouterait une dépendance à justifier ; `kubectl apply` d'une URL **versionnée** (`.../eck/3.4.1/...`, immuable) est tout aussi reproductible. Cohérent enfin avec la ligne du projet : **Terraform provisionne le cluster, `kubectl`/manifests gèrent ce qui tourne dedans** (comme l'API).
+ELK est la techno la moins maîtrisée du projet ; l'opérateur supprime la source de friction la plus élevée en câblant seul le TLS, les mots de passe et les liens ES↔Filebeat et ES↔Kibana. Pas de Helm : l'outil n'est utilisé nulle part ailleurs dans le projet, l'introduire pour une seule brique ajouterait une dépendance à justifier ; `kubectl apply` d'une URL **versionnée** (`.../eck/3.4.1/...`, immuable) est tout aussi reproductible. Cohérent enfin avec la ligne du projet : **Terraform provisionne le cluster, `kubectl`/manifests gèrent ce qui tourne dedans** (comme l'API).
 
 ### Pourquoi Filebeat en DaemonSet (et pas un Deployment), et pas de Logstash
 Un log de conteneur est écrit dans un **fichier sur le disque du nœud** (`/var/log/containers/*.log`) où tourne le pod. Il faut donc un collecteur **sur chaque nœud** : c'est exactement ce que garantit un **DaemonSet** (1 pod/nœud, automatiquement, y compris sur tout nœud ajouté), là où un Deployment à N replicas laisserait des nœuds sans collecteur. **Logstash** (le « L » d'ELK) est volontairement écarté : c'est un pipeline de transformation lourd, inutile ici où Filebeat pousse directement vers Elasticsearch.
+
+### Pourquoi un port-forward pour Kibana plutôt qu'un LoadBalancer
+Kibana sert ici à une démonstration d'administration, pas à un public externe. Le `port-forward` fournit un accès local chiffré et authentifié sans créer un second ELB hors Terraform, donc sans coût réseau ni ressource à nettoyer avant chaque `destroy`. En production, Kibana serait exposé derrière un Ingress/ALB avec contrôle d'accès et TLS gérés.
 
 ### Pourquoi emptyDir (stockage éphémère)
 Elasticsearch réclame un volume de données. Le cluster n'a ni driver EBS CSI ni StorageClass (les ajouter serait une extension d'infra hors périmètre, pour un cluster détruit chaque soir). `emptyDir` suffit à prouver le pipeline : les logs ne survivent pas à un redémarrage de pod, mais les manifests sont la source de vérité et Filebeat ré-ingère en quelques minutes. Écart assumé (en production : PVC sur gp3).

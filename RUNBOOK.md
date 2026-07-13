@@ -258,8 +258,16 @@ kubectl apply -f k8s/elk/filebeat.yaml
 kubectl get beat                                            # HEALTH green, AVAILABLE 2 / EXPECTED 2
 kubectl get pods -l beat.k8s.elastic.co/name=infoline-filebeat -o wide   # 📸 A3-Q1 : 1 pod/nœud
 
-# 4. Vérification + preuve de connexion (port-forward + curl ; certificat auto-signé → -k)
+# 4. Kibana (connecté à Elasticsearch par ECK)
+kubectl apply -f k8s/elk/kibana.yaml
+kubectl get kibana                                        # HEALTH green, NODES 1
+kubectl get pods -l kibana.k8s.elastic.co/name=infoline-kibana   # 1/1 Running
 PW=$(kubectl get secret infoline-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
+kubectl port-forward service/infoline-kibana-kb-http 5601 # terminal dédié (bloquant)
+# Navigateur : https://localhost:5601 ; login elastic + mot de passe PW
+# Kibana : data view filebeat-* avec @timestamp, puis Discover
+
+# 5. Vérification + preuve de connexion ES (port-forward + curl ; certificat auto-signé → -k)
 kubectl port-forward service/infoline-es-es-http 9200       # tunnel local, dans un terminal dédié (bloquant)
 curl -k -u elastic:$PW https://localhost:9200/_cluster/health?pretty                 # 💾 status green
 curl -k -u elastic:$PW "https://localhost:9200/_cat/indices/filebeat-*?v"            # 💾 index filebeat, docs>0
@@ -338,14 +346,13 @@ aws apigatewayv2 get-apis --query "Items[?Name=='infoline-login-api']" --no-cli-
 **Si l'API est déployée** (Service `type: LoadBalancer`) : `kubectl delete -f k8s/` **avant** le
 destroy — le Classic Load Balancer est créé **hors** état Terraform ; le laisser tourner laisse un ELB
 orphelin dont les ENIs peuvent bloquer la suppression du VPC.
-**Si la supervision ELK est déployée** : elle n'expose (à ce stade, A3-Q1) **aucun** Service
-`LoadBalancer` — Elasticsearch s'accède par `port-forward`. Donc `terraform destroy` seul suffit (nœuds
-supprimés → pods ELK supprimés, données `emptyDir` perdues = normal). ⚠️ **Dès que Kibana sera exposé en
-`LoadBalancer` (A3-Q2)**, il faudra `kubectl delete -f k8s/elk/` **avant** le destroy, comme pour l'API
-(2e ELB hors IaC).
+**Si la supervision ELK est déployée** : Elasticsearch et Kibana s'accèdent tous deux par `port-forward` ;
+aucun Service `LoadBalancer` n'est créé. `terraform destroy` seul suffit (nœuds supprimés → pods ELK
+supprimés, données `emptyDir` perdues = normal). Si ce choix change un jour, tout Service `LoadBalancer`
+ELK devra être supprimé avant le destroy.
 ```bash
 kubectl delete -f k8s/                 # uniquement si l'API a été déployée sur ce cluster
-kubectl delete -f k8s/elk/             # supervision ELK — requis seulement si un Service LoadBalancer y est exposé (Kibana, A3-Q2)
+kubectl delete -f k8s/elk/             # uniquement si un Service LoadBalancer ELK a été ajouté
 cd terraform/eks
 terraform destroy
 terraform state list                   # doit être vide

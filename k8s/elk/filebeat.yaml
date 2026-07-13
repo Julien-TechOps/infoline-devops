@@ -42,17 +42,24 @@ spec:
     name: infoline-es                      # ECK câble TLS + credentials automatiquement
   config:
     filebeat:
-      autodiscover:
-        providers:
-        - type: kubernetes
-          node: ${NODE_NAME}
-          hints:
-            enabled: true
-            default_config:
-              type: container
-              paths:
-              - /var/log/containers/*${data.kubernetes.container.id}.log
+      # Un seul input filestream lit TOUS les logs de conteneurs du nœud (tous namespaces, kube-system inclus).
+      # add_kubernetes_metadata enrichit ensuite chaque ligne (pod, namespace, labels) via l'API k8s.
+      # On a écarté autodiscover+hints : en 9.x les hints activent le module ES et génèrent des configs
+      # multi-sections qui échouent ("more than one namespace configured"). Ce montage est plus simple et robuste.
+      inputs:
+      - type: filestream
+        id: kubernetes-container-logs
+        paths:
+        - /var/log/containers/*.log
+        parsers:
+        - container: {}                      # dé-encapsule le format containerd ; `container` déprécié comme INPUT, valide comme PARSER
+        prospector.scanner.symlinks: true    # /var/log/containers/*.log sont des symlinks vers /var/log/pods
     processors:
+    - add_kubernetes_metadata:
+        host: ${NODE_NAME}
+        matchers:
+        - logs_path:
+            logs_path: /var/log/containers/
     - add_cloud_metadata: {}
     - add_host_metadata: {}
   daemonSet:

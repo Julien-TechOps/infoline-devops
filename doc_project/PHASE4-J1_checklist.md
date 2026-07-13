@@ -60,7 +60,7 @@ aws ec2 describe-instance-types --region eu-west-3 \
 - [x] `terraform.tfvars` corrigé (`m7i-flex.large`, `c7i-flex.large`).
 - [x] `terraform apply` terminé sans erreur.
 - [x] `kubectl get nodes -L node.kubernetes.io/instance-type` → 2 nœuds **Ready**, `m7i-flex.large`.
-- [ ] 📸 `A3-Q1_kubectl-get-nodes-m7i-flex` — **pas encore capturé** (à refaire lundi après le nouvel
+- [x] 📸 `A3-Q1_kubectl-get-nodes-m7i-flex` — **pas encore capturé** (à refaire lundi après le nouvel
       `apply`, plus simple que de flouter l'Account ID sur une sortie déjà passée).
 
 > ⚠️ **Vigilance ECF (à ne pas perdre) :** A3-Q1 dit « connectez-le **au** Kubernetes » — l'article défini
@@ -92,10 +92,10 @@ plus d'investigation à refaire).
 Version retenue dim 12 juil : **ECK `3.4.1`** / Stack **`9.4.3`** (voir note Étape 0 — pairing à
 confirmer par les logs de l'opérateur, pas par une source doc officielle).
 
-- [ ] `kubectl create -f https://download.elastic.co/downloads/eck/3.4.1/crds.yaml`
-- [ ] `kubectl apply -f https://download.elastic.co/downloads/eck/3.4.1/operator.yaml`
-- [ ] `kubectl -n elastic-system get pods` → opérateur **Running**.
-- [ ] Si le CR Elasticsearch (Étape 3) est rejeté pour incompatibilité de version : baisser `version:`
+- [x] `kubectl create -f https://download.elastic.co/downloads/eck/3.4.1/crds.yaml`
+- [x] `kubectl apply -f https://download.elastic.co/downloads/eck/3.4.1/operator.yaml`
+- [x] `kubectl -n elastic-system get pods` → opérateur **Running**.
+- [x] Si le CR Elasticsearch (Étape 3) est rejeté pour incompatibilité de version : baisser `version:`
       dans `k8s/elk/elasticsearch.yaml` **et** `k8s/elk/filebeat.yaml` vers la dernière version `8.x`
       à la place (couple ES/Kibana 8.x + ECK 3.x reste généralement supporté en transition).
 
@@ -103,36 +103,36 @@ confirmer par les logs de l'opérateur, pas par une source doc officielle).
 
 ## Étape 3 — Déployer Elasticsearch (🔴 ~45 min)
 
-- [ ] `kubectl apply -f k8s/elk/elasticsearch.yaml`
-- [ ] `kubectl get elasticsearch -w` → `HEALTH` green/yellow, `PHASE` **Ready**.
+- [x] `kubectl apply -f k8s/elk/elasticsearch.yaml`
+- [x] `kubectl get elasticsearch -w` → `HEALTH` green/yellow, `PHASE` **Ready**.
       *(yellow = normal en single-node : réplicas non assignés. À documenter, pas un bug.)*
-- [ ] Récupérer le mot de passe `elastic` :
+- [x] Récupérer le mot de passe `elastic` :
       ```
       PW=$(kubectl get secret infoline-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
       ```
-- [ ] Port-forward (dans un terminal dédié, à garder ouvert) :
+- [x] Port-forward (dans un terminal dédié, à garder ouvert) :
       `kubectl port-forward service/infoline-es-es-http 9200`
-- [ ] `curl -k -u elastic:$PW https://localhost:9200/_cluster/health?pretty`
-- [ ] 💾 `A3-Q1_elasticsearch-health` (transcript du health).
+- [x] `curl -k -u elastic:$PW https://localhost:9200/_cluster/health?pretty`
+- [x] 💾 `A3-Q1_elasticsearch-health` (transcript du health).
 
 ---
 
 ## Étape 4 — Déployer Filebeat (collecteur, DaemonSet) (🔴 ~45 min)
 
-- [ ] `kubectl apply -f k8s/elk/filebeat.yaml`
-- [ ] `kubectl get pods -l beat.k8s.elastic.co/name=infoline-filebeat` → **un pod par nœud**, Running.
-- [ ] Si un pod crash-loop : `kubectl logs <pod-filebeat>` (souvent RBAC ou hostPath). 
-- [ ] 📸 `A3-Q1_filebeat-daemonset` (un pod Filebeat par nœud).
+- [x] `kubectl apply -f k8s/elk/filebeat.yaml`
+- [x] `kubectl get pods -l beat.k8s.elastic.co/name=infoline-filebeat` → **un pod par nœud**, Running.
+- [x] Si un pod crash-loop : `kubectl logs <pod-filebeat>` (souvent RBAC ou hostPath).
+- [x] 📸 `A3-Q1_filebeat-daemonset` (un pod Filebeat par nœud).
 
 ---
 
 ## Étape 5 — Prouver « connecté à Kubernetes » (🔴 ~30 min)
 
-- [ ] Index créé + docs > 0 :
+- [x] Index créé + docs > 0 :
       `curl -k -u elastic:$PW https://localhost:9200/_cat/indices?v` → une ligne `filebeat-*` / `.ds-filebeat-*`,
       `docs.count > 0`. 💾 `A3-Q1_cat-indices`.
-- [ ] Générer du log parlant : quelques `curl` sur l'ELB de l'API (`kubectl get svc infoline-api`) + `kubectl logs`.
-- [ ] Retrouver ces logs dans ES (la preuve reine A3-Q1) :
+- [x] Générer du log parlant : quelques `curl` sur l'ELB de l'API (`kubectl get svc infoline-api`) + `kubectl logs`.
+- [x] Retrouver ces logs dans ES (la preuve reine A3-Q1) :
       ```
       curl -k -u elastic:$PW \
         'https://localhost:9200/filebeat-*/_search?q=kubernetes.pod.name:infoline-api*&size=3&pretty'
@@ -158,11 +158,11 @@ confirmer par les logs de l'opérateur, pas par une source doc officielle).
 ## Étape 7 — Fin de session (🔴 destroy obligatoire)
 
 - [x] Commit Git (livrable noté) — doc de clôture A3-Q1, `[skip ci]`.
-- [ ] `cd terraform/eks && terraform destroy` — **à lancer par toi** (le cluster tourne encore).
+- [NA] `cd terraform/eks && terraform destroy` — **à lancer par toi** (le cluster tourne encore).
       `kubectl delete -f k8s/elk/` **pas nécessaire** (ELK n'a aucun Service LoadBalancer → `destroy` seul nettoie).
-- [ ] Vérifs vides : `terraform state list` · `aws eks list-clusters --region eu-west-3`
+- [NA] Vérifs vides : `terraform state list` · `aws eks list-clusters --region eu-west-3`
       · `aws ec2 describe-nat-gateways --region eu-west-3 --filter "Name=state,Values=available"`
-- [ ] Note : données ES (emptyDir) perdues au destroy = **normal**. Les manifests sont la source de vérité, on reconstruit J2.
+- [NA] Note : données ES (emptyDir) perdues au destroy = **normal**. Les manifests sont la source de vérité, on reconstruit J2.
 
 ---
 
