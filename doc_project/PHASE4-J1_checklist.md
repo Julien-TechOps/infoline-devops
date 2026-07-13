@@ -144,24 +144,22 @@ confirmer par les logs de l'opérateur, pas par une source doc officielle).
 
 ---
 
-## Étape 6 — Doc au fil de l'eau (RITUEL, non négociable) (🟢 ~50 min, peut se faire après destroy)
+## Étape 6 — Doc au fil de l'eau (RITUEL, non négociable) ✅ FAIT (13 juil)
 
-- [ ] `doc_project/A3-Q1_synthese.md` — remplir (Réponse / Pointeurs / Écart assumé / Conformité / Statut).
-      **Écarts à assumer :** emptyDir (pas de persistance) · ECK (opérateur vs manifests bruts) · type d'instance (contrainte compte).
-- [ ] `architecture.md` — remplir le stub `### Pourquoi ELK pour la supervision (logs, pas métriques)` +
-      « Ce qui est réalisé » ELK + les « Pourquoi » (ECK, emptyDir, Filebeat vs Fluent Bit/Logstash, type d'instance).
-- [ ] `doc_project/FRICTIONS.md` — nouvelle `## Session Lun 13 juil — Phase 4 : ELK`, numérotation à partir de **Friction 11**.
-- [ ] `doc_project/backlog.md` — Phase 4 colonne Infra → **🔶**.
-- [ ] `RUNBOOK.md` — démarrer section « Phase 4 — ELK » + **étendre §7 destroy** (`kubectl delete -f k8s/elk/` avant `terraform destroy`).
-- [ ] Déposer les captures `A3-Q1_*` dans `doc_project/captures/` (**flouter `<ACCOUNT_ID>`**).
+- [x] `doc_project/A3-Q1_synthese.md` — **démontré ✅** (3 parties, statut, captures, écarts).
+- [x] `architecture.md` — section « Supervision par les logs — ELK » (Ce qui est réalisé + tous les « Pourquoi ») ; stub résolu ; note de correction Free Tier ajoutée à `### Pourquoi t3.micro`.
+- [x] `doc_project/FRICTIONS.md` — Session Lun 13 juil + **Friction 11** (Free Tier) + 2 pièges d'outil (`-w`, fausse piste TLS) + acquis/vigilance A3-Q2.
+- [x] `doc_project/backlog.md` — ligne Phase 4 scindée : **A3-Q1 ✅✅✅**, A3-Q2 ❌ ; narratif Lun 13 juil ajouté.
+- [x] `RUNBOOK.md` — **§4bis** (déploiement ELK reproductible) + **§7** (cas ELK/emptyDir + futur ELB Kibana) + §8 (déjà : piège Free Tier).
+- [x] Captures `A3-Q1_*` déposées et floutées (6 fichiers, grep Account ID vide sur tout le repo).
 
 ---
 
 ## Étape 7 — Fin de session (🔴 destroy obligatoire)
 
-- [ ] Commit Git (livrable noté).
-- [ ] `kubectl delete -f k8s/elk/`
-- [ ] `cd terraform/eks && terraform destroy`
+- [x] Commit Git (livrable noté) — doc de clôture A3-Q1, `[skip ci]`.
+- [ ] `cd terraform/eks && terraform destroy` — **à lancer par toi** (le cluster tourne encore).
+      `kubectl delete -f k8s/elk/` **pas nécessaire** (ELK n'a aucun Service LoadBalancer → `destroy` seul nettoie).
 - [ ] Vérifs vides : `terraform state list` · `aws eks list-clusters --region eu-west-3`
       · `aws ec2 describe-nat-gateways --region eu-west-3 --filter "Name=state,Values=available"`
 - [ ] Note : données ES (emptyDir) perdues au destroy = **normal**. Les manifests sont la source de vérité, on reconstruit J2.

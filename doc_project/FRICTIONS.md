@@ -521,3 +521,35 @@ La capture du flux `kubectl get pods -w` (état PENDANT) a été polluée par de
 - ELK est la techno la moins maîtrisée : lui laisser de la marge (cf. CLAUDE.md).
 - La supervision (A3) répond à l'exigence du sujet « monitorer + notifier » — sur les **logs** K8s, pas des métriques.
 - Réveil du cluster ~15-20 min avant tout `kubectl` : à budgéter en début de session ELK.
+
+---
+
+## Session Lun 13 juil — Phase 4 : ELK (A3-Q1 — Elasticsearch connecté à K8s)
+
+A3-Q1 **démontré** : Elasticsearch déployé sur EKS via l'opérateur ECK, Filebeat (DaemonSet) ingère les logs de tous les pods, connexion prouvée par un log k8s-enrichi retrouvé dans ES. Une friction bloquante majeure (le type d'instance, résolue autrement que prévu) et deux pièges d'outil mineurs mais instructifs.
+
+### Friction 11 — `terraform apply` bloqué en boucle : compte Free Tier, types d'instance restreints au lancement
+**Symptôme :** après passage de `node_instance_types` sur `t3a.medium`/`t3.medium` (pour héberger Elasticsearch, `t3.micro` à 1 GiB étant trop petit), `terraform apply` reste bloqué **28+ min** sur `module.eks.…aws_eks_node_group.this[0]: Still creating…`, sans jamais d'erreur dans sa sortie. Les nœuds ne rejoignent jamais le cluster.
+**Cause :** le compte AWS est en **Free Tier**, qui **refuse au lancement** tout type d'instance non éligible. L'Auto Scaling Group retente en boucle un lancement EC2 systématiquement rejeté — erreur visible **uniquement** via `aws autoscaling describe-scaling-activities --region eu-west-3` : `Could not launch On-Demand Instances. InvalidParameterCombination - The specified instance type is not eligible for Free Tier`. Elle n'apparaît **jamais** dans la sortie `terraform apply` (qui ne fait que poller la création du node group).
+**Résolution :** `Ctrl+C` sur l'apply (le control plane, déjà créé, reste intact — seul le node group est interrompu). Lister les types **réellement** lançables : `aws ec2 describe-instance-types --region eu-west-3 --filters "Name=free-tier-eligible,Values=true" --query 'InstanceTypes[].{Type:InstanceType,vCPU:VCpuInfo.DefaultVCpus,MemoryMiB:MemoryInfo.SizeInMiB}' --output table` → révèle une liste plus riche qu'attendu, dont **`m7i-flex.large` (8 GiB)** et `c7i-flex.large` (4 GiB), éligibles. `terraform.tfvars` → `node_instance_types = ["m7i-flex.large", "c7i-flex.large"]` (hedge de capacité), re-`apply` → 2 nœuds `Ready` en `m7i-flex.large`.
+**Leçon :** sur ce compte, un **`run-instances --dry-run` ment** — il valide l'autorisation IAM/SCP, **pas** l'éligibilité Free Tier, donc renvoie « Request would have succeeded » pour des types en réalité refusés au lancement (c'est ce qui avait fait retenir `t3a.medium` à tort). Ne jamais valider un type par dry-run seul ici : passer par `describe-instance-types --filters free-tier-eligible`. Corrige deux hypothèses antérieures fausses (« liste blanche SCP », puis « pénurie transitoire »). Commande de diagnostic + piège consignés dans `RUNBOOK.md` §8.
+
+### Piège d'outil — le flag `-w` (watch) bloque le terminal ; les commandes suivantes ne s'exécutent pas
+`kubectl get elasticsearch -w` (utile pour suivre `PHASE` en direct) ne rend **jamais** la main. Les commandes tapées ensuite dans le même terminal (`PW=…`, `curl …`) s'affichent mais **ne sont jamais exécutées** par le shell. Symptôme trompeur : « mon `curl` ne fait rien, même avec `-v` ». **Leçon :** `Ctrl+C` le watch avant de continuer à travailler dans ce terminal. Corollaire de diagnostic : si `curl -v` n'affiche **rien** (pas même `* Trying …`), c'est que curl **ne tourne pas** — chercher côté terminal, pas côté réseau.
+
+### Fausse piste — le « handshake TLS qui échoue » venait du navigateur, pas de curl
+Les logs d'Elasticsearch montraient bien un `SSLHandshakeException: certificate_unknown` au moment des tests — ce qui a un instant fait soupçonner un problème de connexion `curl`. En réalité c'était le **navigateur** (ouvert en parallèle sur `https://localhost:9200`, qui rejette le certificat auto-signé avant le « Proceed anyway »). Le `curl -k`, lui, ne produisait aucun log car il ne s'exécutait pas (cf. piège `-w` ci-dessus). **Leçon :** corréler l'horodatage et l'origine (`remoteAddress`) d'une erreur serveur avant de l'attribuer à la mauvaise commande. La capture navigateur du certificat s'est révélée une **bonne preuve** ECF au passage (`A3-Q1_es-tls-cert-browser.png`).
+
+### Ce qui a bien marché (à ne pas oublier de reproduire)
+ECK 3.4.1 + Elasticsearch 9.4.3 + Filebeat 9.4.3 **verts du premier coup**. `node.store.allow_mmap: false` a évité la friction classique `vm.max_map_count`. La recette `emptyDir` (volume `elasticsearch-data` + pas de `volumeClaimTemplates`) a fonctionné sans PVC pendant. Le pairing de version ECK↔Stack, non confirmé par une doc fraîche, a été **validé par le run** (webhook ECK non déclencheur, `PHASE: Ready`).
+
+## CE QUI EST ACQUIS — PHASE 4 (A3-Q1)
+- Elasticsearch déployé sur EKS via l'opérateur ECK ; Filebeat en DaemonSet (1/nœud) ingère les logs de tous les pods ; connexion prouvée (log enrichi `kubernetes.*` retrouvé dans ES, `orchestrator.cluster.name: infoline-eks`).
+- Modèle mental des logs K8s consolidé : conteneur `stdout` → fichier `/var/log/containers/*.log` **sur le nœud** → Filebeat (`hostPath`, DaemonSet) enrichit et pousse → Elasticsearch indexe → cherchable.
+- Sécurité ES activée par défaut (TLS auto-signé + auth) gérée par ECK ; accès par `kubectl port-forward` + `curl -k -u elastic:$PW`.
+- Contrainte Free Tier des types d'instance cartographiée (m7i-flex.large / c7i-flex.large éligibles) — voir aussi mémoire projet + RUNBOOK §8.
+
+## POINTS DE VIGILANCE POUR LA SUITE (A3-Q2 — Kibana)
+- Déployer Kibana (CRD ECK) connecté à `infoline-es`. S'il est exposé en `LoadBalancer`, il crée un **2e ELB hors Terraform** à `kubectl delete` avant `terraform destroy` (cf. RUNBOOK §7) ; l'alternative `port-forward` évite l'ELB et son coût.
+- Pour des requêtes KQL **parlantes** (erreurs, login, latence), déployer l'API `infoline-api` afin de générer des logs applicatifs réalistes (elle n'est pas déployée sur un cluster fraîchement recréé).
+- Index Filebeat en `yellow` (réplica non plaçable en mono-nœud) = normal, pas un bug.

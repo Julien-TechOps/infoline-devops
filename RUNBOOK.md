@@ -236,6 +236,41 @@ curl http://<external-ip-ou-hostname>/hello   # attendu : Hello from InfoLine AP
 
 ---
 
+## 4bis. Déploiement de la supervision ELK (A3 — manuel, hors CI/CD)
+
+Déployé **à la main**, jamais par le pipeline de l'API : les manifests sont dans `k8s/elk/` (pas `k8s/`,
+que la CI applique en entier). Prérequis : cluster **UP** avec des nœuds **≥ 4 GiB** — le node group est
+en `m7i-flex.large` / `c7i-flex.large` (types **Free Tier eligible**, cf. §8 le piège des types non
+éligibles au lancement).
+
+```bash
+# 1. Opérateur ECK — CRD via `create` (le fichier CRD dépasse la limite d'annotation de `apply`), opérateur via `apply`
+kubectl create -f https://download.elastic.co/downloads/eck/3.4.1/crds.yaml
+kubectl apply  -f https://download.elastic.co/downloads/eck/3.4.1/operator.yaml
+kubectl -n elastic-system get pods                          # elastic-operator-0 → Running
+
+# 2. Elasticsearch (single-node, emptyDir)
+kubectl apply -f k8s/elk/elasticsearch.yaml
+kubectl get elasticsearch                                   # 📸 A3-Q1 : HEALTH green, PHASE Ready
+
+# 3. Filebeat (DaemonSet — 1 pod par nœud)
+kubectl apply -f k8s/elk/filebeat.yaml
+kubectl get beat                                            # HEALTH green, AVAILABLE 2 / EXPECTED 2
+kubectl get pods -l beat.k8s.elastic.co/name=infoline-filebeat -o wide   # 📸 A3-Q1 : 1 pod/nœud
+
+# 4. Vérification + preuve de connexion (port-forward + curl ; certificat auto-signé → -k)
+PW=$(kubectl get secret infoline-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
+kubectl port-forward service/infoline-es-es-http 9200       # tunnel local, dans un terminal dédié (bloquant)
+curl -k -u elastic:$PW https://localhost:9200/_cluster/health?pretty                 # 💾 status green
+curl -k -u elastic:$PW "https://localhost:9200/_cat/indices/filebeat-*?v"            # 💾 index filebeat, docs>0
+curl -k -u elastic:$PW "https://localhost:9200/filebeat-*/_search?q=kubernetes.pod.name:infoline-es*&size=1&pretty"  # 💾 log enrichi kubernetes.*
+```
+> ⚠️ **Floutage** : la réponse `_search` contient l'Account ID (`cloud.account.id` + ARN `orchestrator.cluster.id`) → remplacer par `<ACCOUNT_ID>` avant toute capture.
+> ⚠️ **`kubectl get … -w`** : le flag *watch* bloque le terminal — `Ctrl+C` avant d'enchaîner (sinon les commandes suivantes ne s'exécutent pas ; cf. FRICTIONS session 13 juil).
+> Données ES en `emptyDir` : perdues à chaque `destroy` — **normal**, ces manifests se réappliquent au réveil suivant (Filebeat ré-ingère en quelques minutes).
+
+---
+
 ## 5. Cycles de vie locaux (dev, hors AWS — aucun coût)
 
 Utiles pour valider l'applicatif **hors** chaîne AWS (A2-Q1/Q2 et A2-Q4). Aucun `terraform destroy`
@@ -303,8 +338,14 @@ aws apigatewayv2 get-apis --query "Items[?Name=='infoline-login-api']" --no-cli-
 **Si l'API est déployée** (Service `type: LoadBalancer`) : `kubectl delete -f k8s/` **avant** le
 destroy — le Classic Load Balancer est créé **hors** état Terraform ; le laisser tourner laisse un ELB
 orphelin dont les ENIs peuvent bloquer la suppression du VPC.
+**Si la supervision ELK est déployée** : elle n'expose (à ce stade, A3-Q1) **aucun** Service
+`LoadBalancer` — Elasticsearch s'accède par `port-forward`. Donc `terraform destroy` seul suffit (nœuds
+supprimés → pods ELK supprimés, données `emptyDir` perdues = normal). ⚠️ **Dès que Kibana sera exposé en
+`LoadBalancer` (A3-Q2)**, il faudra `kubectl delete -f k8s/elk/` **avant** le destroy, comme pour l'API
+(2e ELB hors IaC).
 ```bash
 kubectl delete -f k8s/                 # uniquement si l'API a été déployée sur ce cluster
+kubectl delete -f k8s/elk/             # supervision ELK — requis seulement si un Service LoadBalancer y est exposé (Kibana, A3-Q2)
 cd terraform/eks
 terraform destroy
 terraform state list                   # doit être vide

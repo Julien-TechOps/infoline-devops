@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** Ven 10 juil 2026
+**Dernière mise à jour :** Lun 13 juil 2026
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -20,6 +20,7 @@ Prochaine session (8-10 juil) : Phase 3 — pipelines CircleCI (A2-Q3 build/test
 Jeu 9 juil (matin) : infra CI en place (ECR IaC, IAM `infoline-ci`, Access Entry EKS désormais **versionnée en Terraform** — `terraform/eks/access-entries.tf`), blocage CircleCI → bascule GitHub Actions **définitive** (support payant seul, ticket #173426), écart soumis aux enseignants Studi, `.circleci/config.yml` conservé inerte.
 Jeu 9 juil (après-midi, en avance sur la roadmap qui plaçait ce bloc au Ven 10) : `.github/workflows/deploy.yml` écrit (job `build-test` `mvn verify` + job `build-push-deploy` : ECR login → build/push image tag SHA court → `kubectl apply` → `kubectl set image` → `kubectl rollout status`) et `.github/workflows/angular.yml` (build/test des 2 fronts, **vert**). Friction de capacité résolue : nodes `t3.micro` (t3.medium indispo sur ce compte) → `maxSurge: 0` / `maxUnavailable: 1` dans `k8s/api-deployment.yaml`, puis `--timeout` du rollout porté à 240 s (rollout séquentiel plus lent — cf. FRICTIONS.md Friction 10). Reste à faire : run GitHub Actions vert de bout en bout + **preuve reine** (capture `kubectl get pods` avant/après montrant le hash ReplicaSet changé + `curl` ELB → « Hello from InfoLine API »), captures `A2-Q3_*`, MAJ `A2-Q3_synthese.md`.
 Ven 10 juil : Phase 3 **clôturée**. Durcissement : ACCOUNT_ID sorti du manifeste (`IMAGE_PLACEHOLDER` + substitution CI, fusion `apply`+`set image`) et bloc `import` ECR retiré (adoption terminée) — commit `e96fac6`. **Preuve reine capturée** : pipeline vert, rolling update réel (hash `5b6f7c7895`→`955fc7c6`, séquentiel), `curl` ELB OK. `RUNBOOK.md` réécrit de bout en bout (provisioning IaC → CI/CD) ; synthèses A2-Q3 + **A2-Q5 (créée)** à jour. Reste avant Phase 4 : commit/push de la doc + `terraform destroy`.
+Lun 13 juil : Phase 4 démarrée — **A3-Q1 démontré**. Node group remonté `t3.micro` → **`m7i-flex.large`** (8 GiB) : friction structurante résolue (compte **Free Tier** refusant les types non éligibles au lancement, invisible dans `terraform apply` — cf. FRICTIONS **F11** ; dry-run trompeur écarté). Opérateur **ECK 3.4.1** installé, **Elasticsearch 9.4.3** single-node `emptyDir` (`k8s/elk/elasticsearch.yaml`, health green), **Filebeat 9.4.3** DaemonSet (`k8s/elk/filebeat.yaml`, 1 pod/nœud, `HEALTH green` 2/2). **Preuve de connexion** : recherche ES retrouvant un log réel enrichi `kubernetes.*` + `orchestrator.cluster: infoline-eks` (1290 docs ingérés). 6 captures `A3-Q1_*` (1 floutée). Doc à jour (synthèse A3-Q1, section ELK d'`architecture.md`, RUNBOOK §4bis/§7/§8). Reste Phase 4 : **A3-Q2** (Kibana + KQL) + déployer l'API pour des requêtes applicatives parlantes.
 
 ## Avancement par phase
 
@@ -31,7 +32,8 @@ Ven 10 juil : Phase 3 **clôturée**. Durcissement : ACCOUNT_ID sorti du manifes
 | Ven 3 juil | Phase 2 — Spring Boot | A2-Q1 · A2-Q2 | API Spring Boot dockerisée | ✅ | ✅ | ✅ |
 | Lun 6 juil | Phase 2 — Angular | A2-Q4 | Apps Angular (frontend + backoffice) dockerisées | ✅ | ✅ | ✅ |
 | 7-10 juil | Phase 3 — CI/CD | A2-Q3 · A2-Q5 | Pipelines GitHub Actions (bascule depuis CircleCI, cf. FRICTIONS) build/test/deploy sur EKS — vert de bout en bout, rolling update prouvé | ✅ | ✅ | ✅ |
-| 13-15 juil | Phase 4 — ELK | A3-Q1 · A3-Q2 | Elasticsearch + Kibana sur logs K8s | ❌ | ❌ | ❌ |
+| 13 juil | Phase 4 — ELK | A3-Q1 | Elasticsearch (ECK) + Filebeat sur EKS — logs K8s ingérés, connexion prouvée | ✅ | ✅ | ✅ |
+| 14-15 juil | Phase 4 — ELK | A3-Q2 | Kibana connecté à ES + requêtes KQL commentées sur les logs | ❌ | ❌ | ❌ |
 | 16 juil | Tampon technique | Selon trous | Absorber le dérapage le plus probable (ELK/CircleCI) | ❌ | — | — |
 | 17 juil | Phase 5 — Doc archi | Toutes | Schéma d'architecture complet + repo Git propre | — | ❌ | — |
 | 20 juil | Phase 5 — Copie A1+A2 | A1 · A2 | Rédaction copie, Activités 1 et 2 | — | ❌ | ❌ |

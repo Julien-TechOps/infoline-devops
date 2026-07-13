@@ -27,6 +27,8 @@ Les nodes ne sont pas directement joignables depuis Internet. Seul le trafic ent
 ### Pourquoi t3.micro (contrainte de compte, pas un choix d'architecture)
 Le type `t3.medium` initialement visé était indisponible sur ce compte AWS de test — repli sur `t3.micro`. C'est une **contrainte de compte assumée**, pas une décision d'architecture (en production réelle, `t3.medium` ou plus serait retenu). Conséquence concrète découverte à l'usage : `t3.micro` plafonne à **4 pods par node** (limite ENI/CNI du VPC AWS, fonction du type d'instance), contre ~17 sur `t3.medium`. Ce plafond borne directement les stratégies de déploiement possibles — il a contraint le rolling update du Deployment `infoline-api` (`k8s/api-deployment.yaml`), cf. `doc_project/FRICTIONS.md`, session Jeu 9 juil.
 
+> **Précision apportée en Phase 4** : la cause exacte de l'« indisponibilité » de `t3.medium` a été identifiée — c'est une restriction **Free Tier** du compte (refus au lancement des types non éligibles), pas une pénurie. Pour héberger Elasticsearch (≥ 4 GiB), le node group est passé à `m7i-flex.large` (8 GiB, éligible Free Tier). Voir la section « Supervision par les logs — ELK » et `FRICTIONS.md` F11.
+
 ### Modules Terraform utilisés
 - `terraform-aws-modules/vpc/aws ~> 5.8` — référence communauté, gère tables de routage, NACL, tags EKS
 - `terraform-aws-modules/eks/aws ~> 20.0` — gère control plane, IAM roles, security groups, node group managé
@@ -233,9 +235,37 @@ plus, ce qui n'est pas le cas ici.
 
 ---
 
+## Supervision par les logs — ELK (Elasticsearch + Filebeat sur EKS)
+
+### Ce qui est réalisé
+- **Opérateur ECK 3.4.1** (Elastic Cloud on Kubernetes) installé dans le namespace `elastic-system` — apprend au cluster les types `Elasticsearch`, `Kibana`, `Beat` (CRD) et les réconcilie.
+- **Elasticsearch 9.4.3**, single-node (`count: 1`), stockage `emptyDir`, `node.store.allow_mmap: false`, TLS + authentification câblés automatiquement par ECK. Manifeste : `k8s/elk/elasticsearch.yaml`.
+- **Filebeat 9.4.3** en **DaemonSet** (1 pod par nœud), autodiscover Kubernetes, montages `hostPath` sur `/var/log/containers` et `/var/log/pods`, sortie vers `infoline-es` (TLS/credentials injectés par ECK via `elasticsearchRef`). Manifeste : `k8s/elk/filebeat.yaml` (avec ServiceAccount + ClusterRole/Binding).
+- Manifests isolés dans **`k8s/elk/`** (jamais `k8s/`), appliqués **manuellement** — pour ne pas être embarqués par le `kubectl apply -f k8s/` du pipeline CI de l'API.
+
+### Pourquoi superviser par les LOGS et pas des métriques
+Le sujet demande de « monitorer l'état des applications et d'envoyer des notifications en cas de dysfonctionnement ». Deux paradigmes : les **métriques** (valeurs numériques échantillonnées — CPU, latence — répondent à *« combien / à quelle vitesse »*) et les **logs** (événements textuels horodatés, riches en contexte — répondent à *« quoi exactement, et pourquoi »*). Un dysfonctionnement InfoLine (une exception, une requête en échec) est un événement discret contextualisé : c'est le terrain des logs. La « notification » demandée est interprétée comme *un dysfonctionnement visible dans Kibana*. L'alerting actif (Watcher/ElastAlert) est hors périmètre — nommé pour justifier son absence.
+
+### Pourquoi ELK plutôt que Prometheus/Grafana
+Le sujet nomme explicitement **Elasticsearch et Kibana**. C'est aussi cohérent avec le choix « logs » ci-dessus : Prometheus/Grafana est l'outillage des métriques, ELK celui des logs.
+
+### Pourquoi l'opérateur ECK plutôt que des manifests bruts ou Helm
+ELK est la techno la moins maîtrisée du projet ; l'opérateur supprime la source de friction la plus élevée en câblant seul le TLS, les mots de passe et le lien ES↔Filebeat (et ES↔Kibana à venir). Pas de Helm : l'outil n'est utilisé nulle part ailleurs dans le projet, l'introduire pour une seule brique ajouterait une dépendance à justifier ; `kubectl apply` d'une URL **versionnée** (`.../eck/3.4.1/...`, immuable) est tout aussi reproductible. Cohérent enfin avec la ligne du projet : **Terraform provisionne le cluster, `kubectl`/manifests gèrent ce qui tourne dedans** (comme l'API).
+
+### Pourquoi Filebeat en DaemonSet (et pas un Deployment), et pas de Logstash
+Un log de conteneur est écrit dans un **fichier sur le disque du nœud** (`/var/log/containers/*.log`) où tourne le pod. Il faut donc un collecteur **sur chaque nœud** : c'est exactement ce que garantit un **DaemonSet** (1 pod/nœud, automatiquement, y compris sur tout nœud ajouté), là où un Deployment à N replicas laisserait des nœuds sans collecteur. **Logstash** (le « L » d'ELK) est volontairement écarté : c'est un pipeline de transformation lourd, inutile ici où Filebeat pousse directement vers Elasticsearch.
+
+### Pourquoi emptyDir (stockage éphémère)
+Elasticsearch réclame un volume de données. Le cluster n'a ni driver EBS CSI ni StorageClass (les ajouter serait une extension d'infra hors périmètre, pour un cluster détruit chaque soir). `emptyDir` suffit à prouver le pipeline : les logs ne survivent pas à un redémarrage de pod, mais les manifests sont la source de vérité et Filebeat ré-ingère en quelques minutes. Écart assumé (en production : PVC sur gp3).
+
+### Pourquoi m7i-flex.large (contrainte de compte Free Tier)
+La JVM Elasticsearch ne tient pas sur `t3.micro` (1 GiB) utilisé en Phase 1-3. Le compte AWS étant en **Free Tier**, il **refuse au lancement** tout type d'instance non éligible (erreur `InvalidParameterCombination - not eligible for Free Tier`, visible seulement côté Auto Scaling Group). La liste réelle des types éligibles s'obtient par `aws ec2 describe-instance-types --filters "Name=free-tier-eligible,Values=true"` — elle contient `m7i-flex.large` (**8 GiB**, 2 vCPU), retenu, avec `c7i-flex.large` (4 GiB) en second choix. Ceci **corrige** le récit initial « t3.medium indisponible » (cf. `### Pourquoi t3.micro` plus haut) : ce n'était ni une SCP ni une pénurie transitoire, mais la restriction Free Tier — un `run-instances --dry-run` ne la détecte pas (il teste l'IAM, pas l'éligibilité Free Tier). Détail : `doc_project/FRICTIONS.md`, Friction 11.
+
+---
+
 ## Choix techniques et pourquoi
 
 ### Pourquoi EKS + Lambda
 ### Pourquoi Terraform
-### Pourquoi ELK pour la supervision (logs, pas métriques)
+### Pourquoi ELK pour la supervision (logs, pas métriques) → voir la section « Supervision par les logs — ELK » ci-dessus
 ### Loi de Conway — pourquoi cette architecture reflète la structure d'équipe
