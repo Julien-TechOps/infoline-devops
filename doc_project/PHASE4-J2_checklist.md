@@ -95,10 +95,10 @@ qu'elle répond / en quoi elle sert la supervision). Jeu proposé (adapter aux l
 
 ## Étape 7 — Fin de session (🔴 destroy)
 
-- [ ] Commit `[skip ci]` — ⚠️ `k8s/elk/kibana.yaml` **n'est pas** couvert par `paths-ignore` → sans `[skip ci]`
+- [x] Commit `[skip ci]` — `9a1f02c`. ⚠️ `k8s/elk/kibana.yaml` **n'est pas** couvert par `paths-ignore` → sans `[skip ci]`
       le push déclencherait le pipeline API contre le cluster.
-- [ ] `cd terraform/eks && terraform destroy` (Kibana en port-forward → **pas d'ELB** à supprimer, `destroy` seul suffit).
-- [ ] Vérifs vides : `terraform state list` · `aws eks list-clusters --region eu-west-3` · NAT gateways.
+- [x] `cd terraform/eks && terraform destroy` (Kibana en port-forward → **pas d'ELB** à supprimer, `destroy` seul suffit).
+- [x] Vérifs vides : `terraform state list` · `aws eks list-clusters --region eu-west-3` · NAT gateways.
 
 ---
 
