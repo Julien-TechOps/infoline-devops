@@ -1,0 +1,26 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: infoline-es
+  namespace: default
+spec:
+  version: 9.4.3
+  nodeSets:
+  - name: default
+    count: 1
+    config:
+      node.store.allow_mmap: false        # évite l'exigence vm.max_map_count sur le nœud
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          resources:
+            requests:
+              memory: 2Gi                  # ECK cale le heap JVM à ~50% de la limite → ~1 GiB
+              cpu: 500m
+            limits:
+              memory: 2Gi
+        volumes:
+        - name: elasticsearch-data         # nom imposé par ECK pour le volume de données
+          emptyDir: {}                     # éphémère : pas besoin d'EBS CSI / StorageClass
+    # PAS de volumeClaimTemplates → sinon ECK crée un PVC qui reste Pending (aucune StorageClass)

@@ -343,3 +343,17 @@ cd ../iam-ci              && terraform destroy   # ⚠️ invalide les clés →
 - **Fronts Angular** : `COPY` doit cibler `dist/<projet>/browser` (pas `dist/<projet>`) ; ne jamais
   copier `node_modules` de l'hôte (`.dockerignore` + `npm ci`) ; générer avec `ng new --skip-git`
   (éviter un `.git` imbriqué).
+- **Compte AWS Free Tier — types d'instance restreints au lancement** : `terraform apply` reste bloqué
+  en boucle sur `Still creating...` (ASG) si `node_instance_types` contient un type hors Free Tier —
+  erreur réelle (visible seulement côté ASG, pas dans la sortie `apply`) :
+  `InvalidParameterCombination - The specified instance type is not eligible for Free Tier`.
+  Un `run-instances --dry-run` **ne détecte pas** cette restriction (il teste l'autorisation IAM/SCP,
+  pas l'éligibilité Free Tier). Lister les types réellement lançables :
+  ```bash
+  aws ec2 describe-instance-types --region eu-west-3 \
+    --filters "Name=free-tier-eligible,Values=true" \
+    --query 'InstanceTypes[].{Type:InstanceType,vCPU:VCpuInfo.DefaultVCpus,MemoryMiB:MemoryInfo.SizeInMiB}' \
+    --output table
+  ```
+  En cas de blocage : `Ctrl+C` sur l'`apply` (le control plane reste intact, seul le node group est
+  interrompu), corriger `terraform.tfvars`, refaire `plan`/`apply` (cf. FRICTIONS F11).
