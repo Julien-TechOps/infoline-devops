@@ -44,6 +44,12 @@ CR `k8s/elk/filebeat.yaml` appliqué : ServiceAccount + ClusterRole/Binding (lec
   infoline-eks` (rattachement explicite **au** cluster IaC d'A1-Q1). Preuves : `A3-Q1_cat-indices`,
   `A3-Q1_search-k8s-metadata` (floutée).
 
+> **Note de cohérence** : la capture `A3-Q1_search-k8s-metadata` a été prise avec la configuration Filebeat
+> **initiale** (`autodiscover`), simplifiée depuis en `filestream` + `add_kubernetes_metadata` pour collecter
+> **tous** les namespaces de façon fiable (cf. FRICTIONS **F12**). Les champs `orchestrator.cluster.name` et
+> le `log.level` structuré visibles sur cette capture sont propres à la config initiale ; l'enrichissement
+> `kubernetes.*` — le cœur de la preuve de connexion — est **préservé dans les deux configurations**.
+
 ## Pointeurs
 - **Code / manifestes** : `k8s/elk/elasticsearch.yaml`, `k8s/elk/filebeat.yaml`.
 - **Procédure de déploiement / redeploy** : `RUNBOOK.md` §4bis (déploiement ELK manuel : ECK → ES → Filebeat
