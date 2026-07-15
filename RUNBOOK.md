@@ -129,8 +129,10 @@ commande manuelle. Vérifier :
 aws eks list-access-entries --cluster-name infoline-eks --region eu-west-3 --no-cli-pager
 # doit lister le principal .../infoline-ci en plus des rôles de service et de terraform-ecf
 ```
-> **Nodes en `t3.micro`** (t3.medium indisponible sur ce compte) = 4 pods/node max — d'où
-> `maxSurge: 0` sur le Deployment (cf. §8 et FRICTIONS F10).
+> **Type d'instance du node group** : `t3.micro` en Phase 1-3, puis **`m7i-flex.large`** depuis
+> la Phase 4 (Elasticsearch réclame ≥ 4 GiB ; types Free Tier eligible — cf. §4bis et §8). Le
+> `maxSurge: 0` du Deployment vient du plafond de 4 pods/node du `t3.micro` (cf. §8 et FRICTIONS
+> F10) ; conservé tel quel.
 
 ### 2.5 Lambda login + API Gateway (permanent, indépendant)
 Le jar doit être **compilé avant** l'apply (Terraform ne compile pas le Java) :

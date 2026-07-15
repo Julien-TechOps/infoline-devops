@@ -1,7 +1,89 @@
 # Architecture
 
 ## Schéma global
-(EKS, Lambda, apps, PostgreSQL, ELK, CI/CD)
+
+Diagramme de l'architecture **réellement déployée** (rendu nativement par GitHub). Les
+composants du sujet non déployés — PostgreSQL et le *déploiement* des fronts Angular — sont
+regroupés en bas, en pointillés, comme **écart assumé** (le pourquoi est détaillé dans les
+sections dédiées ci-dessous). Chaque bloc correspond à du code versionné : `terraform/`
+(VPC, EKS, Lambda, ECR, IAM), `k8s/` + `k8s/elk/` (workloads), `.github/workflows/` (CI/CD).
+
+```mermaid
+flowchart TB
+    dev["Développeur — git push (main)"]
+    users(["Internet / utilisateurs"])
+
+    subgraph GH["GitHub Actions — CI/CD"]
+        deploywf["deploy.yml (API)<br/>mvn verify → docker build<br/>→ push ECR → kubectl apply → rollout status"]
+        angularwf["angular.yml (fronts)<br/>npm ci → ng build → ng test<br/>build / test uniquement"]
+    end
+
+    subgraph AWS["Compte AWS — région eu-west-3"]
+        ecr[("ECR infoline-api<br/>tag = SHA court, immuable")]
+
+        subgraph SL["Login serverless (isolé)"]
+            apigw["API Gateway HTTP API<br/>ANY /login"]
+            lambda["Lambda infoline-login<br/>runtime java21"]
+            cw[("CloudWatch Logs")]
+        end
+
+        subgraph VPC["VPC 10.0.0.0/16 — 2 AZ (eu-west-3a/b)"]
+            subgraph PUB["Subnets publics"]
+                nat["NAT Gateway (unique)<br/>— egress des nodes privés"]
+                clb["Classic Load Balancer :80<br/>(provisionné par le Service)"]
+            end
+            subgraph PRIV["Subnets privés — node group EKS m7i-flex.large"]
+                subgraph EKS["Cluster EKS 1.34"]
+                    subgraph NSDEF["namespace default"]
+                        svc["Service infoline-api<br/>type LoadBalancer 80→8080"]
+                        dep["Deployment infoline-api<br/>2 replicas — port 8080"]
+                        es[("Elasticsearch infoline-es<br/>9.4.3 — stockage emptyDir")]
+                        kib["Kibana infoline-kibana<br/>accès port-forward 5601"]
+                        fb["Filebeat — DaemonSet<br/>lit /var/log/containers/*.log"]
+                    end
+                    subgraph NSELK["namespace elastic-system"]
+                        eck["Opérateur ECK 3.4.1"]
+                    end
+                end
+            end
+        end
+    end
+
+    subgraph TARGET["Prévu par le sujet — NON déployé (écart assumé)"]
+        pg[("PostgreSQL<br/>jamais provisionné")]
+        fronts["Déploiement des fronts Angular<br/>frontend + backoffice<br/>buildés / testés en CI, non déployés"]
+    end
+
+    dev --> deploywf
+    dev --> angularwf
+    deploywf -->|"push image"| ecr
+    deploywf -->|"auth : clés infoline-ci + Access Entry EKS"| dep
+    ecr -.->|"image tirée par les pods"| dep
+    users -->|"HTTP /hello"| clb
+    clb --> svc
+    svc --> dep
+    users -->|"HTTPS /login"| apigw
+    apigw --> lambda
+    lambda --> cw
+    fb -->|"expédie les logs (TLS)"| es
+    kib -->|"lit"| es
+    eck -.->|"réconcilie (CRD)"| es
+    eck -.-> kib
+    eck -.-> fb
+    angularwf -.->|"artefacts non déployés"| fronts
+
+    classDef notdep stroke:#b08900,stroke-dasharray:6 4,color:#8a6d00;
+    class pg,fronts notdep;
+    style TARGET stroke:#b08900,stroke-dasharray:6 4;
+```
+
+> **Comment lire ce schéma.** Deux chemins d'entrée indépendants (loi de Conway, § plus bas) :
+> l'API métier `/hello` transite par le Classic Load Balancer jusqu'aux pods sur EKS ; le login
+> `/login` est servi par une Lambda derrière API Gateway, totalement isolée du cluster (ses logs
+> vont dans CloudWatch, pas dans Elasticsearch). La supervision ELK tourne *dans* le cluster :
+> Filebeat (un pod par nœud) collecte les logs de tous les pods et les pousse vers Elasticsearch,
+> Kibana les explore. La CI/CD ne déploie que l'API ; les fronts s'arrêtent au build/test.
+> Capture pour la copie : `A?-schema-architecture.png` (rendu GitHub du bloc ci-dessus).
 
 ## Choix techniques et pourquoi
 
@@ -13,7 +95,7 @@
 - **Subnets publics** : 10.0.101.0/24, 10.0.102.0/24 — NAT Gateway, futurs Load Balancers
 - **NAT Gateway unique** : sortie Internet pour les nodes privés (single_nat_gateway = true)
 - **Cluster EKS** : infoline-eks, Kubernetes 1.34, région eu-west-3
-- **Node group "main"** : 2x t3.micro ON_DEMAND, min 1 / max 3 (autoscaling)
+- **Node group "main"** : ON_DEMAND, min 1 / max 3 (autoscaling) — `t3.micro` en Phase 1-3, puis `m7i-flex.large` en Phase 4 pour héberger Elasticsearch (cf. « Pourquoi m7i-flex.large » plus bas)
 
 ### Pourquoi EKS plutôt que Kubernetes auto-installé (kubeadm)
 AWS gère entièrement le **control plane** (API server, etcd, scheduler, controller manager) — zéro maintenance de ces composants, zéro gestion des certificats TLS, haute disponibilité incluse. Ce qui reste sous notre responsabilité : le node group (taille, version, patchs OS) et les workloads déployés.
@@ -175,13 +257,19 @@ confiance). Non retenu ici pour respecter le timeboxing (les clés `infoline-ci`
 déjà en place et fonctionnelles) ; noté comme durcissement de production possible, au même
 titre que S3+CloudFront pour le front ou un ALB via contrôleur dédié.
 
-### Pourquoi un script de reconstruction centralisé (RTO) — à faire Phase 5
+### Pourquoi un script de reconstruction centralisé (RTO)
 Un DevOps doit pouvoir chiffrer le temps de remise en route de l'infra après incident
-(RTO). Un script rejouant apply/destroy dans le bon ordre de dépendance (EKS → Lambda →
-ECR, indépendants entre eux mais tous nécessaires avant le déploiement applicatif) permet
-de mesurer ce chiffre par un run réel. Destroy quotidien (EKS, facturé à l'heure) et
+(RTO). Un script rejouant apply/destroy dans le bon ordre de dépendance (ECR → IAM-CI →
+Lambda → EKS, indépendants entre eux mais tous nécessaires avant le déploiement applicatif)
+permet de mesurer ce chiffre par un run réel. Destroy quotidien (EKS, facturé à l'heure) et
 destroy complet (EKS + Lambda + ECR, fin de projet) volontairement séparés pour ne pas
 détruire par erreur des ressources facturées à l'usage.
+
+Concrétisé dans `scripts/rebuild.sh` (reconstruction chronométrée) et `scripts/teardown.sh`
+(destroy quotidien / `--full`), orchestrant les étapes déjà validées du `RUNBOOK.md`. **Statut
+Phase 5 : brouillon non encore exécuté de bout en bout** — la validation et la *mesure*
+effective du RTO sont prévues au run final du 22 juil ; aucun chiffre de RTO n'est avancé
+avant ce run. Cf. `scripts/README.md`.
 
 ## Applications Front — Angular (principal + backoffice)
 
@@ -270,6 +358,90 @@ La JVM Elasticsearch ne tient pas sur `t3.micro` (1 GiB) utilisé en Phase 1-3. 
 ## Choix techniques et pourquoi
 
 ### Pourquoi EKS + Lambda
+
+> [BROUILLON — à réécrire par Julien]
+
+Le sujet impose les deux (« API à déployer sur Kubernetes », « login en serverless »). Les
+faire **cohabiter** n'est pas subi : c'est le bon appariement de deux profils de charge à
+deux modèles de calcul.
+
+- **API métier → EKS.** Service HTTP à durée de vie longue, trafic soutenu et prévisible,
+  qui bénéficie de la réplication, des sondes et du rolling update d'un orchestrateur. Un
+  cluster managé (control plane délégué à AWS) est le bon outil pour un workload qui *tourne
+  en continu*.
+- **Login → Lambda.** Fonction courte, sans état, invoquée par à-coups (pics à la connexion).
+  Le serverless facture à l'invocation, monte en charge tout seul et retombe à zéro coût sans
+  serveur allumé — inutile de maintenir un service permanent pour ça.
+
+Les deux ont des **modèles de facturation opposés** (EKS à l'heure, Lambda à l'usage) — c'est
+ce qui justifie de détruire `terraform/eks/` chaque soir mais pas `terraform/lambda-login/`
+(détail chiffré § « Service serverless — AWS Lambda »). Surtout, cette dualité sert directement
+l'exigence du sujet — *« séparer les applications pour diminuer le risque d'être hors service »* :
+un incident ou un pic sur le login (Lambda) n'a aucun effet sur l'API (EKS), et réciproquement.
+Ce cloisonnement du *blast radius* est le fil repris ci-dessous (« Loi de Conway »).
+
+Détail par brique : sections « Cluster Kubernetes — Amazon EKS » et « Service serverless — AWS
+Lambda (login) » plus haut.
+
 ### Pourquoi Terraform
+
+> [BROUILLON — à réécrire par Julien]
+
+Le sujet demande d'automatiser la mise en place de l'infrastructure. Terraform est retenu
+comme outil **déclaratif** standard : on décrit l'état cible, l'outil calcule et applique le
+diff.
+
+- **Raison opérationnelle propre à ce projet.** La discipline destroy/apply quotidienne (EKS
+  facturé à l'heure) n'est tenable *que* parce que l'infra est codifiée : reconstruire à la
+  main chaque matin un VPC + cluster + node group + IAM serait impraticable et source d'erreurs.
+  L'IaC transforme « réveiller l'infra » en un `terraform apply` reproductible (~15-20 min).
+- **State = source de vérité** de ce qui existe réellement côté AWS ; **plan avant apply** =
+  revue du diff avant toute mutation (fiche B1 P4 : lire le plan avant d'appliquer).
+- **Isolation par composant.** Un dossier + un state séparé par brique (`eks/`, `lambda-login/`,
+  `ecr/`, `iam-ci/`) : cycles de vie indépendants, blast radius d'un apply/destroy limité à une
+  brique, cohérent avec la séparation applicative (et avec Conway, ci-dessous). Contrepartie
+  assumée : pas de state distant ni de lock (backend S3 laissé commenté) — acceptable pour un
+  opérateur unique, à activer dès qu'on travaille à plusieurs.
+- **Réutilisation de modules communautaires** éprouvés (`terraform-aws-modules/vpc`, `.../eks`)
+  plutôt que réécrire des centaines de lignes de réseau et d'IAM (fiche B1 P4 : composants
+  isolés plutôt que copié-collé).
+
+Écarts déjà traités ailleurs : ECR créé hors Terraform puis réimporté (§ « Pourquoi ECR en
+IaC ») ; le Classic Load Balancer du Service `type: LoadBalancer` est créé par Kubernetes,
+**hors** Terraform — d'où le nettoyage manuel avant `destroy` (cf. `RUNBOOK.md`).
+
 ### Pourquoi ELK pour la supervision (logs, pas métriques) → voir la section « Supervision par les logs — ELK » ci-dessus
+
 ### Loi de Conway — pourquoi cette architecture reflète la structure d'équipe
+
+> [BROUILLON — à réécrire par Julien]
+
+*« Toute organisation qui conçoit un système produit une architecture qui calque sa propre
+structure de communication »* (Melvin Conway, 1968). La promo porte ce nom : le point n'est
+pas décoratif, il éclaire *pourquoi* l'architecture est découpée ainsi.
+
+Le sujet pose deux décisions **organisationnelles** avant toute technique : deux équipes montées
+(développement / DevOps) et la volonté explicite de *« séparer les applications pour diminuer le
+risque d'être hors service »*. L'architecture livrée épouse ces frontières :
+
+- **Des frontières techniques qui suivent des frontières de responsabilité.** Chaque brique
+  fonctionnelle est un composant autonome — dossier propre, artefact propre (image ECR, jar
+  Lambda, bundle Angular), cycle de vie propre : API métier, login, front principal, back-office,
+  supervision.
+- **Un cloisonnement réel, pas cosmétique.** Login en Lambda isolée de l'API sur EKS (panne et
+  scaling indépendants) ; fronts `frontend` (public) et `backoffice` (admin) séparés — deux
+  audiences, deux équipes potentielles ; supervision ELK déployée *hors* du pipeline CI de l'API
+  (`k8s/elk/`, jamais `k8s/`), donc une évolution de l'observabilité ne casse pas les déploiements
+  applicatifs.
+- **La même logique côté IaC.** States Terraform séparés par composant : chaque brique est
+  « possédable » par une équipe sans marcher sur les autres. Le pipeline volontairement découplé
+  de l'outil CI (portable GitHub Actions ↔ CircleCI) relève du même réflexe : ne rien souder qui
+  gagnerait à rester séparable.
+
+Conséquence défendable : ce système pourrait être **réparti entre équipes selon ses propres
+lignes de découpe** sans refonte — on structure l'architecture pour *rendre possible* l'organisation
+cible (l'« inverse Conway maneuver »), au lieu de la subir.
+
+Honnêteté du périmètre : ici un **opérateur unique** porte tout le projet ; l'argument Conway est
+donc **prospectif** (comment cette découpe scalerait en équipes), pas le récit d'une organisation
+multi-équipes réellement vécue. Nommé pour ne pas le surinterpréter devant le jury.

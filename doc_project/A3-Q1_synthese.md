@@ -54,7 +54,6 @@ CR `k8s/elk/filebeat.yaml` appliqué : ServiceAccount + ClusterRole/Binding (lec
 - **Code / manifestes** : `k8s/elk/elasticsearch.yaml`, `k8s/elk/filebeat.yaml`.
 - **Procédure de déploiement / redeploy** : `RUNBOOK.md` §4bis (déploiement ELK manuel : ECK → ES → Filebeat
   → vérif), §7 (destroy — cas ELK), §8 (piège Free Tier + commande de diagnostic des types éligibles).
-  Checklist pas-à-pas vécue : `doc_project/PHASE4-J1_checklist.md`.
 - **Pourquoi ces choix** (logs vs métriques, ECK, emptyDir, Filebeat vs Fluent Bit/Logstash, m7i-flex.large) :
   `architecture.md`, section « Supervision par les logs — ELK ».
 - **Frictions** : `doc_project/FRICTIONS.md` — session Lun 13 juil, **Friction 11** (piège Free Tier au

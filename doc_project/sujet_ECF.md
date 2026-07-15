@@ -71,10 +71,10 @@ rendre. Le detail brut (captures, transcripts) reste dans `doc_project/captures/
 |---|---|---|---|---|
 | A1-Q1 (partie 1) | Cluster Kubernetes en IaC | Phase 1 — EKS | A1-Q1_synthese.md | A1-Q1_terraform-apply..., A1-Q1_eks-console.png, A1-Q1_terraform-destroy... |
 | A1-Q1 (partie 2) | Serverless Lambda en IaC | Phase 1 — Lambda | A1-Q1_synthese.md | A1-Q1_lambda-terraform-apply-output-CLI-validation.md, A1-Q1_lambda-console-aws... |
-| A2-Q1 | Spring Boot hello world exposé sur un port | Phase 2 — Spring Boot | À produire | À produire |
-| A2-Q2 | Dockerisation Spring Boot | Phase 2 — Spring Boot | À produire | À produire |
-| A2-Q3 | CI/CD build/test/deploy Spring Boot → EKS | Phase 3 — CI/CD | À produire | À produire |
-| A2-Q4 | Angular hello world | Phase 2 — Angular | À produire | À produire |
-| A2-Q5 | CI/CD build/test Angular (CircleCI) | Phase 3 — CI/CD | À produire | À produire |
-| A3-Q1 | Elasticsearch connecté à Kubernetes | Phase 4 — ELK | À produire | À produire |
-| A3-Q2 | Kibana + exemples de queries sur logs | Phase 4 — ELK | À produire | À produire |
+| A2-Q1 | Spring Boot hello world exposé sur un port | Phase 2 — Spring Boot | A2-Q1_synthese.md | A2-Q1_curl-local-* |
+| A2-Q2 | Dockerisation Spring Boot | Phase 2 — Spring Boot | A2-Q2_synthese.md | A2-Q2_dockerfile / docker-build / docker-ps-logs-curl |
+| A2-Q3 | CI/CD build/test/deploy Spring Boot → EKS | Phase 3 — CI/CD | A2-Q3_synthese.md | A2-Q3_pipeline-green.png, rollout-transcript, ecr-images.png... |
+| A2-Q4 | Angular hello world | Phase 2 — Angular | A2-Q4_synthese.md | A2-Q4_ng-build-*, docker-ps-browser.png |
+| A2-Q5 | CI/CD build/test Angular (CircleCI) | Phase 3 — CI/CD | A2-Q5_synthese.md | A2-Q5_pipeline-green.png, build-test-logs-* |
+| A3-Q1 | Elasticsearch connecté à Kubernetes | Phase 4 — ELK | A3-Q1_synthese.md | A3-Q1_elasticsearch-health, filebeat-daemonset, cat-indices... |
+| A3-Q2 | Kibana + exemples de queries sur logs | Phase 4 — ELK | A3-Q2_synthese.md | A3-Q2_kibana-*, kql-*, A3-consolidation_* |

@@ -622,3 +622,54 @@ Un empêchement externe résolu tardivement (le support finit par débloquer) ne
 - Contrainte d'outil CI/CD **levée officiellement** par le formateur référent (forum Studi, ~13 juil) : GitHub Actions validé pour A2-Q3 et A2-Q5.
 - Décision figée : **un seul système CI** (GitHub Actions), pas de coexistence CircleCI/GHA.
 - Aucune trace CircleCI dans le dépôt (le `config.yml` n'avait jamais été committé) : copie propre.
+
+---
+
+## Session Mer 15 juil — Phase 5 (J1, en avance) : doc archi, schéma, cohérence, structuration
+
+Démarrage de la Phase 5 en avance (créneau initial : Ven 17 juil). Journée **documentaire**, sans
+infra : schéma d'architecture, sections « pourquoi » manquantes, structuration du repo. Les
+« frictions » du jour sont surtout des **incohérences documentaires** interceptées par relecture
+croisée code ↔ docs — exactement le risque « balle dans le pied » devant un jury.
+
+### Audit de cohérence — 4 faux/désuets corrigés
+Une doc écrite « au fil de l'eau » fige des affirmations **à une date** ; sans relecture croisée en
+fin de phase, des faits datés survivent comme s'ils étaient l'état réel du rendu :
+- **`t3.medium` fantôme (×2)** : `doc_project/A1-Q1_synthese.md` et `terraform/eks/README.md`
+  décrivaient un node group « 2× t3.medium » — type **jamais déployé** (visé au départ, refusé par
+  le compte Free Tier ; réel = `t3.micro` puis `m7i-flex.large`). Corrigé + renvoi `architecture.md`.
+  Idem note `RUNBOOK.md` §2.4 (contredisait §4bis qui, lui, disait `m7i-flex.large`).
+- **README — `.circleci/config.yml` « conservé »** : affirmation fausse (jamais committé, cf. tampon
+  du même jour). Reformulé : GitHub Actions seul, aucun `.circleci/` dans le repo.
+- **2 références mortes** : `A3-Q1/A3-Q2_synthese.md` pointaient vers `PHASE4-J1/J2_checklist.md`
+  (supprimés). Pointeurs retirés (le RUNBOOK §4bis est déjà la procédure) ; les 3 suppressions de
+  checklists sont commitées.
+- **Table `sujet_ECF.md`** encore en « À produire » pour A2/A3 alors que les 8 synthèses et les
+  captures existent : mise à jour.
+
+### Réalisations
+- **Schéma d'architecture** en **Mermaid** dans `architecture.md` (rendu natif GitHub, versionné),
+  fidèle au déployé ; PostgreSQL et le *déploiement* des fronts Angular marqués **« prévu / non
+  déployé — écart assumé »** (montrés mais visuellement distincts, honnêteté défendable).
+- **3 sections « pourquoi »** comblées : EKS+Lambda (deux modèles de calcul), Terraform (IaC), **Loi
+  de Conway** — livrées en **BROUILLON balisé**, à réécrire/s'approprier avant soutenance.
+- **Repo structuré** : 7 READMEs de sous-dossiers (`api/`, `k8s/`, `k8s/elk/`, `terraform/` +
+  `ecr/` + `iam-ci/`, `lambda-login/`), lock `s3-test` désuivi (aligné sur `.gitignore`).
+- **Scripts RTO** `scripts/rebuild.sh` + `teardown.sh` (dérivés du RUNBOOK) — **non testés**, à
+  valider et chronométrer au run du 22 juil.
+
+### Leçon
+Un jury croise le **code** et la **copie** : chaque affirmation doit correspondre au réel *au moment
+du rendu*, pas au moment où elle a été écrite. La relecture croisée de fin de phase n'est pas
+cosmétique — c'est elle qui débusque les faits périmés qu'aucune session technique ne revisite.
+
+## CE QUI EST ACQUIS — PHASE 5 (J1)
+- Schéma d'archi versionné (Mermaid) fidèle au réel, écarts sujet explicitement marqués.
+- Cohérence code↔doc rétablie (aucune affirmation fausse résiduelle : t3.medium, CircleCI, refs mortes).
+- Repo lisible pour le jury (READMEs par sous-dossier, arborescence documentée).
+
+## POINTS DE VIGILANCE POUR LA SUITE
+- **Brouillons à s'approprier** : les 3 sections « pourquoi » (surtout Conway) doivent être réécrites
+  par moi — ne pas les défendre telles quelles.
+- **Scripts RTO non testés** : ne communiquer aucun chiffre de RTO avant le run réel du 22 juil.
+- **Capture du schéma** : produire le PNG du rendu Mermaid (`A?-schema-architecture.png`) pour la copie.

@@ -4,7 +4,9 @@
 
 ## Réponse apportée
 
-- **Cluster Kubernetes** : Amazon EKS managé (VPC dédié 2 AZ, node group 2x t3.medium),
+- **Cluster Kubernetes** : Amazon EKS managé (VPC dédié 2 AZ, node group géré — `t3.micro`
+  en Phase 1, puis `m7i-flex.large` en Phase 4 pour héberger Elasticsearch ; cf.
+  `architecture.md` § « Pourquoi t3.micro » et « Pourquoi m7i-flex.large »),
   provisionné et détruit proprement en Terraform.
 - **Service serverless** : Lambda "login" (Java 21) + API Gateway HTTP API, provisionnée
   en Terraform, invocation validée par `curl` et `aws lambda invoke`.

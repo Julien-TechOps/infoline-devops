@@ -42,7 +42,6 @@ Les requêtes ont été adaptées aux champs réellement alimentés par les diff
 ## Pointeurs
 - **Code / manifeste** : `k8s/elk/kibana.yaml`.
 - **Procédure de déploiement / redeploy** : `RUNBOOK.md` §4bis (Kibana + port-forward 5601).
-  Checklist pas-à-pas : `doc_project/PHASE4-J2_checklist.md`.
 - **Pourquoi ces choix** (port-forward vs LoadBalancer, Kibana via ECK) : `architecture.md`, section
   « Supervision par les logs — ELK ».
 - **Frictions** : `doc_project/FRICTIONS.md`, session Phase 4 (friction 12) + session Mer 15 juil (consolidation).

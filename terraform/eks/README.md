@@ -2,7 +2,8 @@
 
 Cette config provisionne :
 - un **VPC** dédié (2 AZ, sous-réseaux publics + privés, NAT Gateway) ;
-- un **cluster EKS** managé, avec un **node group** de 2 instances `t3.medium`.
+- un **cluster EKS** managé, avec un **node group** managé (`t3.micro` en Phase 1-3, puis
+  `m7i-flex.large` depuis la Phase 4 pour héberger Elasticsearch — cf. `architecture.md`).
 
 Elle répond à la première moitié de la question A1 du sujet ECF :
 > *« écrivez le code qui prépare un kube kubernetes »*
