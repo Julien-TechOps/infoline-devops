@@ -2,7 +2,7 @@
 
 *Déploiement de l'API sur le cluster EKS provisionné en Phase 1. Statut au 10 juillet 2026 :
 partie 1/2 (déploiement manuel) faite ; partie 2/2 (pipeline qui automatise la séquence) réalisée
-en **GitHub Actions**, vert de bout en bout — bascule assumée depuis CircleCI, cf. « Écart outil assumé ».*
+en **GitHub Actions**, vert de bout en bout — choix d'outil validé par le jury, cf. « Choix d'outil validé par le jury ».*
 
 ## Réponse apportée
 
@@ -45,14 +45,18 @@ d'âge des pods), et `curl` ELB → `Hello from InfoLine API` après déploiemen
   `pipeline-green.png`, `rollout-transcript.md` (hash A→B), `deploy-job-logs.png` (rollout séquentiel),
   `curl-after-deploy.md`.
 
-## Écart outil assumé
+## Choix d'outil validé par le jury
 
-Le sujet cite CircleCI ; la copie livre GitHub Actions. Écart assumé et argumenté (comme la
-dockerisation du front en A2-Q4) : blocage account-level CircleCI non imputable au candidat,
-support inaccessible sans plan payant (ticket #173426, cf. FRICTIONS.md Jeu 9 juil),
-validation d'écart demandée aux enseignants sur le forum Studi. Résolu par un outil CI/CD
-équivalent et natif à GitHub. La compétence évaluée (automatiser build/test/déploiement sur
-le cluster) est démontrée à l'identique ; seul l'outil change. Pointeurs : workflow dans
+Le sujet cite CircleCI ; la copie livre GitHub Actions. Ce choix est **validé officiellement par
+l'équipe pédagogique** (forum Studi, ~13 juil) : *« Oui sans problème, on n'a pas de contrainte
+d'outil »* (Ala Atrash, Formateur Référent HETIC et DEVOPS, réponse relayée par Albérick Pussat,
+Responsable pédagogique). Le contexte initial (blocage account-level CircleCI non imputable au
+candidat, support inaccessible sans plan payant — ticket #173426, cf. FRICTIONS.md Jeu 9 juil)
+reste vrai mais n'est plus le seul argument : la contrainte d'outil est explicitement levée.
+Résolu par un outil CI/CD équivalent et natif à GitHub. La compétence évaluée (automatiser
+build/test/déploiement sur le cluster) est démontrée à l'identique ; seul l'outil change, avec
+l'aval du jury. Décision figée le 15 juil : **un seul système CI** (GitHub Actions), pas de
+coexistence avec CircleCI (cf. FRICTIONS.md session Mer 15 juil). Pointeurs : workflow dans
 `.github/workflows/`, "pourquoi" dans architecture.md (section CI/CD), infra CI (ECR IaC,
 IAM `infoline-ci`, Access Entry) inchangée.
 

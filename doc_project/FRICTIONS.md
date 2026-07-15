@@ -467,8 +467,9 @@ contournement : le code est déjà hébergé sur GitHub, donc GitHub Actions est
 natif de la plateforme — aucune intégration OAuth/App tierce à maintenir. Toute l'infra CI
 préparée le 8 juillet (ECR IaC, IAM `infoline-ci`, Access Entry EKS) est réutilisée telle
 quelle, indépendante de l'outil.
-Le `.circleci/config.yml` reste versionné dans le repo à titre documentaire (démarche
-initiale + portabilité du pipeline), sans intention de le connecter.
+Intention du jour : garder une trace CircleCI à titre documentaire, sans le connecter.
+[Correction 15 juil : ce `config.yml` n'a en fait jamais été committé — seul un dossier
+`.circleci/` vide a subsisté en local, non suivi par git. Cf. session Mer 15 juil.]
 Conformité : message posté sur le forum Studi (enseignants DevOps) pour valider l'écart
 d'outil sur A2-Q3/A2-Q5 (le sujet cite CircleCI), en précisant que la compétence évaluée —
 automatiser build/test/déploiement sur le cluster — est démontrée à l'identique avec GitHub
@@ -591,3 +592,33 @@ Chaque ligne d'une stack trace Java est indexée comme un **document distinct** 
 - Scénario d'incident reproductible sans modif de code : `kubectl set env … SERVER_PORT=notanumber` → crash Spring Boot loggé → détecté dans Kibana → `kubectl rollout undo`.
 - Dashboard + data view + recherche versionnés (Saved Objects) → reconstruction rapide au réveil.
 - « Notification » InfoLine démontrée comme **détection visuelle** d'un dysfonctionnement réel dans Kibana.
+
+---
+
+## Session Mer 15 juil — Tampon : clôture du fil CircleCI (verdict pédagogique)
+
+Journée tampon. Le blocage CircleCI (ticket #173426) trouve sa **clôture officielle** côté pédagogie, ce qui transforme l'« écart outil assumé » sur A2-Q3/A2-Q5 en choix **validé par le jury**. Aucune action code : décision de ne pas ajouter CircleCI et de consigner le verdict.
+
+### Verdict pédagogique — contrainte d'outil levée
+Le fil ouvert sur le forum Studi le Jeu 9 juil (demande de validation d'écart d'outil, cf. session correspondante) a reçu ses réponses le ~13 juil :
+- **Albérick Pussat — Responsable pédagogique** (réponse « Officiel ») : accuse réception et sollicite un formateur du parcours.
+- **Ala Atrash — Formateur Référent HETIC et DEVOPS** : *« Oui sans problème, on n'a pas de contrainte d'outil »*.
+
+Conséquence : GitHub Actions est **explicitement autorisé** en remplacement de CircleCI pour A2-Q3 **et** A2-Q5. Ce qui était un écart à défendre devient un choix béni par la pédagogie ; les synthèses A2-Q3 et A2-Q5 sont mises à jour en ce sens (section « Écart outil assumé » → « Choix d'outil validé »).
+
+### Arbitrage — ne PAS faire vivre CircleCI *et* GitHub Actions
+Entre-temps le support CircleCI a débloqué la synchro du dépôt (le projet `infoline-devops` réapparaît dans la console, prêt à connecter). Tentation : brancher enfin CircleCI. **Décision : non.** Raisons :
+- **Zéro gain de note** — la contrainte d'outil est levée, un pipeline CircleCI n'apporterait aucun point de plus qu'un GHA déjà vert et documenté.
+- **Le repo est un livrable noté** (lisibilité) : deux systèmes CI pour le même build/test = deux sources de vérité, risque de divergence, question inutile en soutenance (« pourquoi deux ? »).
+- **Journée tampon ≠ confort** (CLAUDE.md) : ajouter CircleCI serait du scope creep pur. Principe retenu : **un seul système CI**, GitHub Actions.
+
+### Correction factuelle — le `.circleci/config.yml` n'a jamais été committé
+La note du Jeu 9 juil (« le `.circleci/config.yml` reste versionné à titre documentaire ») était inexacte : seul un dossier `.circleci/` **vide** subsistait en local, jamais suivi par git (git ne versionne pas les dossiers vides — invisible pour le jury). Rien à retirer du dépôt ; dossier vide local supprimé pour l'hygiène. Aucune trace CircleCI ne pollue la copie.
+
+### Leçon
+Un empêchement externe résolu tardivement (le support finit par débloquer) ne réactive pas mécaniquement l'ancienne piste : une fois la bascule **définitive** actée et validée par le jury, revenir en arrière n'est plus de l'ingénierie, c'est du dérapage. La bonne clôture est documentaire (sceller le verdict), pas technique.
+
+## CE QUI EST ACQUIS — TAMPON (CircleCI)
+- Contrainte d'outil CI/CD **levée officiellement** par le formateur référent (forum Studi, ~13 juil) : GitHub Actions validé pour A2-Q3 et A2-Q5.
+- Décision figée : **un seul système CI** (GitHub Actions), pas de coexistence CircleCI/GHA.
+- Aucune trace CircleCI dans le dépôt (le `config.yml` n'avait jamais été committé) : copie propre.

@@ -1,8 +1,8 @@
 # A2-Q5 — Script qui build/test les applications Angular
 
 *Pipeline CI qui build et teste les deux fronts Angular à chaque push. Statut au 10 juillet 2026 :
-réalisé en **GitHub Actions** (bascule assumée depuis CircleCI, cf. « Écart outil assumé »), vert de
-bout en bout.*
+réalisé en **GitHub Actions** (choix d'outil validé par le jury, cf. « Choix d'outil validé par le
+jury »), vert de bout en bout.*
 
 ## Réponse apportée
 
@@ -34,12 +34,19 @@ sans déploiement (le sujet A2-Q5 s'arrête à « build/test ») :
 - **Pas de déploiement** : contrairement à A2-Q3 (« déployez sur le kube »), A2-Q5 s'arrête à
   build/test — aucun verbe « déployez » ni infra cible. Cadrage détaillé dans `A2-Q4_synthese.md`.
 
-## Écart outil assumé
+## Choix d'outil validé par le jury
 
-Le sujet cite CircleCI (« CircleCI est accepté ») ; la copie livre GitHub Actions. Même écart qu'en
-A2-Q3 : blocage account-level CircleCI non imputable au candidat (ticket #173426, cf. `FRICTIONS.md`
-Jeu 9 juil), résolu par un outil CI/CD équivalent et natif à GitHub. La compétence évaluée (automatiser
-le build/test) est démontrée à l'identique ; seul l'outil change.
+Le sujet cite CircleCI (« CircleCI est accepté ») ; la copie livre GitHub Actions. Ce choix est
+**validé officiellement par l'équipe pédagogique** (forum Studi, ~13 juil) :
+
+> **Ala Atrash — Formateur Référent HETIC et DEVOPS :** « Oui sans problème, on n'a pas de
+> contrainte d'outil » (réponse relayée par Albérick Pussat, Responsable pédagogique).
+
+Le contexte initial (blocage account-level CircleCI non imputable au candidat, ticket #173426,
+cf. `FRICTIONS.md` Jeu 9 juil) reste vrai mais n'est plus le seul argument : la contrainte d'outil
+est explicitement levée. La compétence évaluée (automatiser le build/test) est démontrée à
+l'identique ; seul l'outil change, avec l'aval du jury. Décision figée le 15 juil : **un seul système
+CI** (GitHub Actions), pas de coexistence avec CircleCI (cf. `FRICTIONS.md` session Mer 15 juil).
 
 ## Conformité
 
