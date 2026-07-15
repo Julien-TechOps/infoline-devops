@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** Lun 13 juil 2026
+**Dernière mise à jour :** Mer 15 juil 2026
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -22,6 +22,7 @@ Jeu 9 juil (après-midi, en avance sur la roadmap qui plaçait ce bloc au Ven 10
 Ven 10 juil : Phase 3 **clôturée**. Durcissement : ACCOUNT_ID sorti du manifeste (`IMAGE_PLACEHOLDER` + substitution CI, fusion `apply`+`set image`) et bloc `import` ECR retiré (adoption terminée) — commit `e96fac6`. **Preuve reine capturée** : pipeline vert, rolling update réel (hash `5b6f7c7895`→`955fc7c6`, séquentiel), `curl` ELB OK. `RUNBOOK.md` réécrit de bout en bout (provisioning IaC → CI/CD) ; synthèses A2-Q3 + **A2-Q5 (créée)** à jour. Reste avant Phase 4 : commit/push de la doc + `terraform destroy`.
 Lun 13 juil : Phase 4 **A3-Q1 démontré**. Node group remonté `t3.micro` → **`m7i-flex.large`** (8 GiB) : friction structurante résolue (compte **Free Tier** refusant les types non éligibles au lancement, invisible dans `terraform apply` — cf. FRICTIONS **F11** ; dry-run trompeur écarté). Opérateur **ECK 3.4.1** installé, **Elasticsearch 9.4.3** single-node `emptyDir` (`k8s/elk/elasticsearch.yaml`, health green), **Filebeat 9.4.3** DaemonSet (`k8s/elk/filebeat.yaml`, 1 pod/nœud, `HEALTH green` 2/2). **Preuve de connexion** : recherche ES retrouvant un log réel enrichi `kubernetes.*` + `orchestrator.cluster: infoline-eks` (1290 docs ingérés). 6 captures `A3-Q1_*` (1 floutée).
 Lun 13 juil (suite, en avance sur le créneau du 14) : **A3-Q2 démontré**. Kibana 9.4.3 géré par ECK est `HEALTH green`, connecté à `infoline-es` et accessible par port-forward. Data view `filebeat-*` sur `@timestamp`, Discover opérationnel et sept preuves de recherche : anomalies, incident TLS `certificate_unknown`, namespace, pod, `stderr`, critères combinés et fenêtre temporelle. Frontières documentées : login Lambda dans CloudWatch ; aucune latence applicative émise par les hello-world. A3-Q2 est clôturé côté infra, documentation et captures ; reste le scénario applicatif de consolidation prévu en J3.
+Mer 15 juil : **consolidation A3 (J3)** — boucle d'observabilité fermée sur un cas réel. API `infoline-api` redéployée (image ECR `0d0207f`), **dashboard Kibana « InfoLine — Supervision ELK »** (3 panneaux : volume, répartition par pod, compteur d'erreurs) sauvegardé **et exporté en Saved Objects versionnés** (`k8s/elk/kibana-saved-objects/`, réimportable car `.kibana` vit sur `emptyDir`). **Scénario d'incident** : `kubectl set env … SERVER_PORT=notanumber` → crash Spring Boot au démarrage (`CrashLoopBackOff`, stack trace loggée) → **détecté dans Kibana** (le pod fautif bondit en tête du panneau « par pod » ; Error Count 63→94 même fenêtre ; recherche `message:"server.port"`) → **résolu** par `kubectl rollout undo` (pods sains, `curl /hello` 200). 8 captures `A3-consolidation_*`. Boucle émettre→…→remarquer→agir démontrée = la « notification » InfoLine. Reste : `terraform destroy` + commit.
 
 ## Avancement par phase
 
@@ -35,6 +36,7 @@ Lun 13 juil (suite, en avance sur le créneau du 14) : **A3-Q2 démontré**. Kib
 | 7-10 juil | Phase 3 — CI/CD | A2-Q3 · A2-Q5 | Pipelines GitHub Actions (bascule depuis CircleCI, cf. FRICTIONS) build/test/deploy sur EKS — vert de bout en bout, rolling update prouvé | ✅ | ✅ | ✅ |
 | 13 juil | Phase 4 — ELK | A3-Q1 | Elasticsearch (ECK) + Filebeat sur EKS — logs K8s ingérés, connexion prouvée | ✅ | ✅ | ✅ |
 | 13 juil (avance) | Phase 4 — ELK | A3-Q2 | Kibana connecté à ES + requêtes KQL commentées sur les logs | ✅ | ✅ | ✅ |
+| 15 juil | Phase 4 — ELK | A3-Q1/Q2 (consolid.) | Dashboard Kibana + scénario de détection d'incident (déploiement cassé) détecté/résolu | ✅ | ✅ | ✅ |
 | 16 juil | Tampon technique | Selon trous | Absorber le dérapage le plus probable (ELK/CircleCI) | ❌ | — | — |
 | 17 juil | Phase 5 — Doc archi | Toutes | Schéma d'architecture complet + repo Git propre | — | ❌ | — |
 | 20 juil | Phase 5 — Copie A1+A2 | A1 · A2 | Rédaction copie, Activités 1 et 2 | — | ❌ | ❌ |

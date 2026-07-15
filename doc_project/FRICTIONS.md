@@ -564,3 +564,30 @@ ECK 3.4.1 + Elasticsearch 9.4.3 + Filebeat 9.4.3 **verts du premier coup**. `nod
 ## POINTS DE VIGILANCE POUR LA SUITE
 - Index Filebeat en `yellow` (réplica non plaçable en mono-nœud) = normal, pas un bug.
 - L'alerting actif reste hors périmètre ; la preuve ECF porte sur la visibilité et la recherche des dysfonctionnements dans Kibana.
+
+---
+
+## Session Mer 15 juil — Phase 4 : consolidation (dashboard + scénario d'incident)
+
+Consolidation A3 (J3) : API redéployée, dashboard minimal, incident provoqué → détecté → résolu. **Aucune friction bloquante** ; quelques pièges/leçons d'exploitation à consigner.
+
+### Piège — kubeconfig périmé après reconstruction du cluster (erreur DNS trompeuse)
+Au réveil du jour, `kubectl create` (installation ECK) a échoué sur `dial tcp: lookup <hash>.eks.amazonaws.com ... no such host`. Ce n'est **pas** un souci réseau : chaque `terraform destroy`/`apply` recrée le cluster avec un **endpoint aléatoire différent**, et `~/.kube/config` gardait celui de la veille. **Résolution :** relancer `aws eks update-kubeconfig` (à faire à **chaque** reconstruction, pas une fois par projet). Diagnostic : comparer l'endpoint de l'erreur à `aws eks describe-cluster --query cluster.endpoint`. Consigné dans `RUNBOOK.md` §8.
+
+### Piège Kibana — un filtre posé dans la barre du dashboard s'applique à TOUS les panneaux
+Le filtre `message:"WARN" or "ERROR"` du compteur d'erreurs avait été saisi dans la barre du **dashboard** au lieu de l'**éditeur Lens du panneau** → les 3 panneaux étaient filtrés sur les erreurs, écrasant la ligne de base du « volume total ». Repéré par cohérence des chiffres (Panneau 1 à ~57, trop proche du compteur d'erreurs 63). **Résolution :** filtre déplacé dans l'éditeur du seul panneau concerné.
+
+### Leçon — comparer des captures à fenêtre temporelle égale
+Le compteur d'erreurs « Today » est un **total cumulé** (ne peut que croître). Comparer `63` (baseline « Today ») à `22` (incident « Last 1 hour ») était trompeur. Une recapture en « Today » a rétabli une comparaison valide (63 → 94). Règle : juger une tendance sur la même fenêtre, ou via le sparkline / Panneau 1, pas sur le total brut.
+
+### Persistance des objets Kibana — exportés en Saved Objects versionnés
+Dashboard, data view et recherche Discover vivent dans l'index `.kibana`, sur le stockage `emptyDir` d'ES → perdus à chaque `destroy`. Exportés (`k8s/elk/kibana-saved-objects/dashboard-infoline-supervision.ndjson`) pour réimport en un coup, cohérent avec la ligne IaC (le fichier versionné est la source de vérité).
+
+### Limite assumée — pas de parser multiline
+Chaque ligne d'une stack trace Java est indexée comme un **document distinct** (input `filestream` sans parser `multiline`). N'empêche pas de retrouver l'incident ; en production on grouperait l'exception en un seul document.
+
+## CE QUI EST ACQUIS — PHASE 4 (consolidation)
+- Boucle d'observabilité fermée de bout en bout : émettre → collecter → indexer → visualiser → **remarquer** (dashboard/Discover) → **agir** (rollback).
+- Scénario d'incident reproductible sans modif de code : `kubectl set env … SERVER_PORT=notanumber` → crash Spring Boot loggé → détecté dans Kibana → `kubectl rollout undo`.
+- Dashboard + data view + recherche versionnés (Saved Objects) → reconstruction rapide au réveil.
+- « Notification » InfoLine démontrée comme **détection visuelle** d'un dysfonctionnement réel dans Kibana.

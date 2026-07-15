@@ -405,3 +405,9 @@ cd ../iam-ci              && terraform destroy   # ⚠️ invalide les clés →
   ```
   En cas de blocage : `Ctrl+C` sur l'`apply` (le control plane reste intact, seul le node group est
   interrompu), corriger `terraform.tfvars`, refaire `plan`/`apply` (cf. FRICTIONS F11).
+- **`kubectl` échoue avec une erreur DNS après un réveil de cluster** (`dial tcp: lookup <hash>.eks.amazonaws.com
+  ... no such host`) : **kubeconfig périmé**, pas un souci réseau. Chaque `terraform destroy`/`apply` recrée
+  le cluster avec un **nouvel endpoint aléatoire** (`aws eks describe-cluster --query cluster.endpoint` donne
+  le vrai) ; `~/.kube/config` garde l'ancien tant qu'on ne le rafraîchit pas. Vérifier en comparant l'endpoint
+  de l'erreur à celui de `describe-cluster` — s'ils diffèrent, **relancer** `aws eks update-kubeconfig`
+  (§2.4) : à faire à **chaque** reconstruction du cluster, pas une seule fois par session/projet.
