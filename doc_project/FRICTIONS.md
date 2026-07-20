@@ -673,3 +673,77 @@ cosmétique — c'est elle qui débusque les faits périmés qu'aucune session t
   par moi — ne pas les défendre telles quelles.
 - **Scripts RTO non testés** : ne communiquer aucun chiffre de RTO avant le run réel du 22 juil.
 - **Capture du schéma** : produire le PNG du rendu Mermaid (`A?-schema-architecture.png`) pour la copie.
+
+---
+
+# Session Lun 20 juil 2026 — Phase 5 (J2) : rédaction de la copie A1+A2+A3 et clôture du dépôt
+
+**Objectif du créneau (roadmap)** : rédiger les sections A1 et A2 de la copie.
+**Réalisé** : A1, A2 **et A3** rédigées (A3 était programmée le 21 juil), plus la clôture
+documentaire du dépôt.
+
+## Ce qui a été fait
+
+- **Trois fichiers de copie rédigés** (`fiches-essentielles/copie/A1.md`, `A2.md`, `A3.md`),
+  structure identique pour les 7 questions : *ce qui est demandé → réponse apportée → le code →
+  la preuve → pourquoi ces choix → écarts assumés*. Le Word fourni par Studi n'impose aucune
+  rubrique (uniquement les intitulés de questions) : la structure interne est donc un choix,
+  tenu constant pour que le correcteur retrouve le même squelette partout.
+- **Emplacement volontairement hors Git** : les copies sont dans `fiches-essentielles/`
+  (gitignoré, cf. `.gitignore:35`). Ce sont des **brouillons de transfert** vers le Word, qui
+  devient la source de vérité de la copie — pas un quatrième foyer documentaire.
+- **Captures triées pour le Word** : chaque tableau de captures porte désormais une colonne
+  indiquant 📌 obligatoire / ○ recommandé / — référence seule. **17 PNG retenus sur 28.**
+  Distinction posée : les 23 fichiers `.md` sont des transcrits terminal, à coller **en texte
+  à chasse fixe**, jamais en image.
+- **`architecture.md` assaini** : titre `## Choix techniques et pourquoi` présent **en double**
+  (l. 115 et l. 389) → renommés en « par composant » et « transverses ». Les **3 sections
+  BROUILLON réécrites** (EKS+Lambda, Terraform, Conway) : arguments conservés, méta-langage
+  tourné vers le jury et renvois aux fiches Studi retirés (ils ont leur foyer dans les synthèses).
+- **`README.md`** : ajout d'une section « Par où commencer (jury / correcteur) » avec ordre de
+  lecture chiffré, et **définition explicite du périmètre de la documentation technique**
+  (`architecture.md` + `RUNBOOK.md` + READMEs de sous-dossiers ; `doc_project/` = annexes de
+  conduite de projet).
+- **Marqueurs BROUILLON** : levé dans `bilan.md` (c'était une note à moi-même, le document est
+  abouti) ; **conservé et reformulé** dans `scripts/README.md`.
+
+## Friction 13 — deux sorties de commande reconstituées au lieu d'être lues
+
+En rédigeant A3, deux blocs `kubectl get elasticsearch` et `kubectl get kibana` ont été écrits
+de mémoire, avec des valeurs plausibles mais **inventées** (colonnes crédibles, `AGE` fantaisiste).
+Détecté à la relecture, avant tout usage.
+
+- `kubectl get kibana` : remplacé par la sortie réelle de `A3-Q2_kibana-ready.md` (`AGE 111m`).
+- `kubectl get elasticsearch` : **aucun transcript n'existe** pour cette commande. Le bloc a été
+  supprimé et remplacé par la preuve réellement capturée — le `curl _cluster/health`.
+
+### Leçon
+Une sortie de commande inventée dans une copie est un risque disproportionné : le jury peut
+demander à rejouer la commande, et l'écart se voit immédiatement. Règle appliquée pour la suite :
+**tout bloc de terminal figurant dans la copie doit provenir d'un fichier de `captures/`**, jamais
+d'une reconstitution — même quand la valeur « paraît évidente ».
+
+## Écart de méthode conservé (non résolu ce jour)
+
+Points laissés ouverts, à trancher avant le collage dans le Word :
+- **Anonymisation incohérente** : les transcrits masquent `<ACCOUNT_ID>` et `<SG_DEFAULT_ID>`,
+  mais l'ID API Gateway (`imo88c74dg`) et les DNS d'ELB apparaissent en clair dans la copie.
+- **Double slash de l'`invoke_url`** : le transcrit affiche `…amazonaws.com//login` (stage
+  `$default` + `route_path`), normalisé à un seul slash dans la copie — écart copie/capture.
+- **Deux affirmations déduites à vérifier** : `maxSurge: 0` motivé par le nombre de pods par
+  nœud (et non la mémoire) ; flag Karma retiré = `--browsers=ChromeHeadless`.
+
+## CE QUI EST ACQUIS — PHASE 5 (J2)
+- Les 7 questions ECF sont rédigées de bout en bout, structure homogène, chaque preuve pointée
+  par un chemin complet depuis la racine du dépôt.
+- Documentation technique sans marqueur de brouillon, avec porte d'entrée et périmètre explicites.
+- Sélection des captures arrêtée : le travail de mise en forme du Word est désormais mécanique.
+
+## POINTS DE VIGILANCE POUR LA SUITE
+- **Ne plus modifier les trois `.md` de copie** une fois collés dans le Word : deux versions qui
+  divergent valent moins qu'une seule.
+- **Vérification visuelle des PNG Kibana** avant collage (`cloud.account.id` possible dans les
+  documents Discover — un grep ne voit rien dans une image).
+- **Lien Git à tester en navigation privée** : un dépôt privé donne une 404 au correcteur.
+- **Scripts RTO toujours non testés** — aucun chiffre de RTO avant le run du 22 juil.
+- **Capture du schéma d'architecture** (`A?-schema-architecture.png`) toujours à produire.

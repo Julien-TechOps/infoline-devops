@@ -1,10 +1,5 @@
 # Bilan de projet — ECF DevOps InfoLine
 
-> ⚠️ **[BROUILLON Phase 5 — à réécrire / t'approprier avant dépôt.]** Structure inspirée du
-> bilan de projet Hub2 (forme), contenu **ancré dans ce dépôt**. Rien n'est inventé : chaque
-> affirmation renvoie au code, aux synthèses ou au journal. À relire ligne à ligne — c'est une
-> pièce de la copie que tu devras défendre à l'oral.
-
 **Auteur :** Julien Youssefi
 **Contexte :** ECF Administrateur Système DevOps (Studi, promo Conway) — sujet InfoLine
 **Période :** 18 juin → 23 juillet 2026 — 16 jours ouvrés (~112 h), phases 0 → 5
@@ -67,6 +62,7 @@ Trois contraintes ont façonné les choix (détail et « pourquoi » dans
 
 - **Budget** : discipline de `terraform destroy` quotidien (EKS facturé à l'heure), NAT Gateway
   unique, Lambda serverless (facturé à l'usage), Kibana en `port-forward` (pas de second ELB).
+  Chiffrage consolidé par composant : `architecture.md` § « Bilan financier ».
 - **Compte AWS Free Tier** : refus au lancement des types d'instance non éligibles — contrainte
   qui a directement piloté le dimensionnement des nœuds (cf. §3).
 - **Timebox** (~112 h, aucune marge) : hello world assumés, aucun sur-développement applicatif,

@@ -5,6 +5,32 @@ API Java dockerisée et déployée sur EKS, login en Lambda serverless, deux fro
 Angular (principal + backoffice), base PostgreSQL, supervision via ELK. Infra
 entièrement pilotée en Terraform (IaC).
 
+---
+
+## Par où commencer (jury / correcteur)
+
+Ce dépôt constitue deux des trois livrables attendus : **le code** et **la documentation
+technique**. Voici l'ordre de lecture conseillé.
+
+| Ordre | Document | Ce qu'on y trouve | Durée |
+|---|---|---|---|
+| 1 | [`architecture.md`](architecture.md) | Schéma d'architecture global, puis le « pourquoi » de chaque choix technique | ~20 min |
+| 2 | [`RUNBOOK.md`](RUNBOOK.md) | Comment construire, détruire et reconstruire l'infrastructure — la preuve de reproductibilité | ~10 min |
+| 3 | READMEs de sous-dossiers | Détail d'usage de chaque brique (`terraform/*/`, `api/`, `apps/`, `k8s/`, `scripts/`) | à la demande |
+
+**Périmètre de la documentation technique.** Elle est constituée des trois entrées
+ci-dessus, et d'elles seules.
+
+Le dossier `doc_project/` contient des **annexes de conduite de projet** — journal des
+frictions, avancement, synthèses par question, bilan — qui éclairent la démarche mais ne
+sont pas la documentation technique des solutions. `doc_project/captures/` rassemble les
+**preuves brutes** (transcrits terminal et captures d'écran) référencées par la copie.
+
+**Correspondance avec les questions de l'ECF** : table complète dans
+[`doc_project/sujet_ECF.md`](doc_project/sujet_ECF.md).
+
+---
+
 ## Structure du repo
 
 - `terraform/` — IaC, un dossier par composant, chacun avec son propre state :

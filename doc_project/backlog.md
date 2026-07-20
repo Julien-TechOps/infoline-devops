@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** Mer 15 juil 2026
+**Dernière mise à jour :** Lun 20 juil 2026
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -25,6 +25,8 @@ Lun 13 juil (suite, en avance sur le créneau du 14) : **A3-Q2 démontré**. Kib
 Mer 15 juil (suite, **Phase 5 J1 en avance** — créneau initial 17 juil) : journée doc. **Schéma d'architecture** ajouté (Mermaid dans `architecture.md`, fidèle au déployé ; PostgreSQL + déploiement des fronts marqués « non déployé »). **3 sections « pourquoi »** comblées en **brouillon** à réécrire (EKS+Lambda, Terraform, **Loi de Conway**). **Repo structuré** : 7 READMEs de sous-dossiers, lock `s3-test` désuivi. **4 incohérences factuelles corrigées** (`t3.medium` fantôme ×2, README CircleCI, 2 refs mortes de checklists, table `sujet_ECF` obsolète — cf. FRICTIONS session 15 juil / Phase 5 J1). **Scripts RTO brouillon** (`scripts/rebuild.sh` + `teardown.sh`, non testés → validation au run du 22 juil). `bilan.md` rédigé en **brouillon** (forme inspirée du bilan Hub2, ancré dans le dépôt). Reste : capturer le rendu du schéma (PNG), **réécrire les 4 brouillons** (3 sections « pourquoi » + `bilan.md`), assembler la copie finale.
 Mer 15 juil : **consolidation A3 (J3)** — boucle d'observabilité fermée sur un cas réel. API `infoline-api` redéployée (image ECR `0d0207f`), **dashboard Kibana « InfoLine — Supervision ELK »** (3 panneaux : volume, répartition par pod, compteur d'erreurs) sauvegardé **et exporté en Saved Objects versionnés** (`k8s/elk/kibana-saved-objects/`, réimportable car `.kibana` vit sur `emptyDir`). **Scénario d'incident** : `kubectl set env … SERVER_PORT=notanumber` → crash Spring Boot au démarrage (`CrashLoopBackOff`, stack trace loggée) → **détecté dans Kibana** (le pod fautif bondit en tête du panneau « par pod » ; Error Count 63→94 même fenêtre ; recherche `message:"server.port"`) → **résolu** par `kubectl rollout undo` (pods sains, `curl /hello` 200). 8 captures `A3-consolidation_*`. Boucle émettre→…→remarquer→agir démontrée = la « notification » InfoLine. Reste : `terraform destroy` + commit.
 
+Lun 20 juil : **Phase 5 J2 — copie rédigée de bout en bout et dépôt clôturé côté doc.** Les **7 questions ECF** rédigées (A1, A2 **et A3**, cette dernière en avance sur le 21) dans `fiches-essentielles/copie/` (**hors Git**, brouillons de transfert vers le Word qui devient la source de vérité). Structure homogène pour les 7 : *demandé → réponse → code → preuve → pourquoi → écarts*. **Captures triées pour le Word : 17 PNG retenus sur 28**, colonne 📌/○/— dans chaque tableau ; les 23 `.md` sont des transcrits à coller en texte, pas en image. **`architecture.md` assaini** : titre `## Choix techniques et pourquoi` en **double** (l.115/l.389) → « par composant » / « transverses » ; **3 sections BROUILLON réécrites** (EKS+Lambda, Terraform, Conway). **`README.md`** : section « Par où commencer (jury) » + **périmètre de la doc technique explicité** (`architecture.md` + `RUNBOOK.md` + READMEs ; `doc_project/` = annexes). Marqueur BROUILLON levé dans `bilan.md`, **conservé** dans `scripts/README.md` (scripts réellement non testés). **Friction 13** : deux sorties `kubectl` reconstituées de mémoire dans A3, détectées et corrigées — règle posée, tout bloc terminal de la copie doit venir de `captures/`. Reste : trancher l'anonymisation (ID API Gateway + DNS ELB en clair), vérifier 2 affirmations déduites (`maxSurge`, flag Karma), produire le PNG du schéma.
+
 ## Avancement par phase
 
 | Date | Phase | Question ECF | Objectif (PRO) | Infra | Doc | Captures |
@@ -40,7 +42,9 @@ Mer 15 juil : **consolidation A3 (J3)** — boucle d'observabilité fermée sur 
 | 15 juil | Phase 4 — ELK | A3-Q1/Q2 (consolid.) | Dashboard Kibana + scénario de détection d'incident (déploiement cassé) détecté/résolu | ✅ | ✅ | ✅ |
 | 15 juil (avance) | Tampon technique | A2-Q3/Q5 | Fil CircleCI clôturé : contrainte d'outil **levée par le formateur** (GHA validé) → décision « un seul système CI », doc scellée (FRICTIONS + synthèses A2-Q3/Q5) | ✅ | ✅ | — |
 | 17 juil (fait le 15, avance) | Phase 5 — Doc archi | Toutes | Schéma Mermaid + 3 sections « pourquoi » (brouillon à réécrire) + repo propre (7 READMEs, 4 incohérences corrigées) + scripts RTO (brouillon) | — | 🔶 | — |
-| 20 juil | Phase 5 — Copie A1+A2 | A1 · A2 | Rédaction copie, Activités 1 et 2 | — | ❌ | ❌ |
-| 21 juil | Phase 5 — Copie A3 | A3 | Rédaction copie A3 + relecture globale | — | ❌ | ❌ |
+| 20 juil | Phase 5 — Copie A1+A2 | A1 · A2 | Rédaction copie, Activités 1 et 2 | — | ✅ | ✅ |
+| 20 juil (avance) | Phase 5 — Copie A3 | A3 | Rédaction copie A3 (créneau initial 21 juil) | — | ✅ | ✅ |
+| 20 juil (avance) | Phase 5 — Clôture dépôt | Toutes | Brouillons `architecture.md` réécrits, titre en double corrigé, porte d'entrée README, tri des captures pour le Word | — | ✅ | — |
+| 21 juil | Phase 5 — Mise en forme | Toutes | Collage dans le Word + insertion des 17 PNG retenus + relecture globale | — | ❌ | ❌ |
 | 22 juil (matin) | Phase 5 — Tampon final | Selon trous | Rattrapages avant le run, vérif des 3 livrables | — | ❌ | ❌ |
 | 22 juil (après-midi) | Finalisation | Toutes | Run complet (destroy+rebuild sans intervention manuelle) + dépôt | ❌ | ❌ | ❌ |

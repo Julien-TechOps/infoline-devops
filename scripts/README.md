@@ -1,11 +1,13 @@
 # scripts — reconstruction centralisée (RTO)
 
-> ⚠️ **BROUILLON Phase 5 — NON testé de bout en bout.**
-> Ces scripts orchestrent en un point ce que `RUNBOOK.md` décrit pas-à-pas (procédure, elle,
-> **validée manuellement**). Ils n'ont pas encore tourné en conditions réelles : la
-> validation — et la **mesure effective du RTO** — est prévue au run final du **22 juil**.
-> **Ne pas communiquer de chiffre de RTO** tant que `rebuild.sh` n'a pas été exécuté en vrai.
-> Le chemin de référence garanti reste `RUNBOOK.md`.
+> ⚠️ **Statut : non validé en conditions réelles.**
+> Ces scripts orchestrent en un seul point ce que `RUNBOOK.md` décrit pas-à-pas — cette
+> procédure manuelle étant, elle, **validée**. Les scripts n'ont pas encore été exécutés de
+> bout en bout : leur validation, et avec elle la **mesure effective du RTO**, est prévue au
+> run final du **22 juillet 2026**.
+>
+> En conséquence : **aucun chiffre de RTO ne doit être communiqué** tant que `rebuild.sh`
+> n'a pas réellement tourné, et le chemin de référence garanti reste `RUNBOOK.md`.
 
 ## Pourquoi
 

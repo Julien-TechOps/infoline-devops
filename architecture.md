@@ -27,23 +27,30 @@ flowchart TB
             cw[("CloudWatch Logs")]
         end
 
-        subgraph VPC["VPC 10.0.0.0/16 — 2 AZ (eu-west-3a/b)"]
-            subgraph PUB["Subnets publics"]
-                nat["NAT Gateway (unique)<br/>— egress des nodes privés"]
-                clb["Classic Load Balancer :80<br/>(provisionné par le Service)"]
+        subgraph VPC["VPC 10.0.0.0/16"]
+            subgraph AZA["AZ eu-west-3a"]
+                pubA["Subnet public<br/>10.0.101.0/24"]
+                natA["⚠️ NAT Gateway — UNIQUE du VPC<br/>seul chemin de sortie Internet"]
+                nodeA["Subnet privé 10.0.1.0/24<br/>node EKS"]
+                pubA --> natA
             end
-            subgraph PRIV["Subnets privés — node group EKS m7i-flex.large"]
-                subgraph EKS["Cluster EKS 1.34"]
-                    subgraph NSDEF["namespace default"]
-                        svc["Service infoline-api<br/>type LoadBalancer 80→8080"]
-                        dep["Deployment infoline-api<br/>2 replicas — port 8080"]
-                        es[("Elasticsearch infoline-es<br/>9.4.3 — stockage emptyDir")]
-                        kib["Kibana infoline-kibana<br/>accès port-forward 5601"]
-                        fb["Filebeat — DaemonSet<br/>lit /var/log/containers/*.log"]
-                    end
-                    subgraph NSELK["namespace elastic-system"]
-                        eck["Opérateur ECK 3.4.1"]
-                    end
+            subgraph AZB["AZ eu-west-3b"]
+                pubB["Subnet public<br/>10.0.102.0/24 (pas de NAT ici)"]
+                nodeB["Subnet privé 10.0.2.0/24<br/>node EKS"]
+            end
+
+            clb["Classic Load Balancer :80<br/>(provisionné par le Service)"]
+
+            subgraph EKS["Cluster EKS 1.34 — node group m7i-flex.large"]
+                subgraph NSDEF["namespace default"]
+                    svc["Service infoline-api<br/>type LoadBalancer 80→8080"]
+                    dep["Deployment infoline-api<br/>2 replicas — port 8080"]
+                    es[("Elasticsearch infoline-es<br/>9.4.3 — stockage emptyDir")]
+                    kib["Kibana infoline-kibana<br/>accès port-forward 5601"]
+                    fb["Filebeat — DaemonSet<br/>lit /var/log/containers/*.log"]
+                end
+                subgraph NSELK["namespace elastic-system"]
+                    eck["Opérateur ECK 3.4.1"]
                 end
             end
         end
@@ -58,6 +65,11 @@ flowchart TB
     dev --> angularwf
     deploywf -->|"push image"| ecr
     deploywf -->|"auth : clés infoline-ci + Access Entry EKS"| dep
+    dep --- nodeA
+    dep --- nodeB
+    nodeA -.->|"pull image (egress)"| natA
+    nodeB -.->|"⚠️ pull image : egress CROSS-AZ obligatoire<br/>seul chemin vers Internet si eu-west-3a tombe → rien"| natA
+    natA -.->|"egress"| ecr
     ecr -.->|"image tirée par les pods"| dep
     users -->|"HTTP /hello"| clb
     clb --> svc
@@ -75,6 +87,9 @@ flowchart TB
     classDef notdep stroke:#b08900,stroke-dasharray:6 4,color:#8a6d00;
     class pg,fronts notdep;
     style TARGET stroke:#b08900,stroke-dasharray:6 4;
+
+    classDef spof stroke:#c0392b,stroke-width:3px,color:#c0392b;
+    class natA spof;
 ```
 
 > **Comment lire ce schéma.** Deux chemins d'entrée indépendants (loi de Conway, § plus bas) :
@@ -83,9 +98,26 @@ flowchart TB
 > vont dans CloudWatch, pas dans Elasticsearch). La supervision ELK tourne *dans* le cluster :
 > Filebeat (un pod par nœud) collecte les logs de tous les pods et les pousse vers Elasticsearch,
 > Kibana les explore. La CI/CD ne déploie que l'API ; les fronts s'arrêtent au build/test.
+>
+> **⚠️ Faille visible sur ce schéma — la NAT est un SPOF ancré dans une seule AZ.**
+> `single_nat_gateway = true` place l'unique NAT Gateway dans le premier subnet public de la
+> liste (`10.0.101.0/24`, donc **`eu-west-3a`**) — mais elle sert **les deux** subnets privés :
+> le node de `eu-west-3b` doit traverser l'AZ pour l'atteindre (flèche rouge). Si `eu-west-3a`
+> tombe, le node de `eu-west-3b` **perd toute sortie Internet** : plus aucun `docker pull` depuis
+> ECR, donc **plus aucun nouveau déploiement** (le pipeline échoue au `rollout status`), même si
+> le pod déjà en route sur `eu-west-3b` continue de répondre en entrant (le trafic ELB → pod ne
+> passe pas par la NAT). Détail complet et corrigé de calcul :
+> `fiches-essentielles/exercice-reseau-vpc.md` (partie B). Correctif de prod identifié : une NAT
+> par AZ (§ « Pourquoi un seul NAT Gateway » ci-dessous).
+>
 > Capture pour la copie : `A?-schema-architecture.png` (rendu GitHub du bloc ci-dessus).
 
-## Choix techniques et pourquoi
+## Choix techniques par composant
+
+*Une section par brique de l'architecture : ce qui est provisionné, et pourquoi ces
+options plutôt que d'autres. Les décisions qui traversent plusieurs briques (association
+EKS + Lambda, Terraform, découpe en composants) sont regroupées plus bas, section
+« Choix techniques transverses ».*
 
 ## Cluster Kubernetes — Amazon EKS
 
@@ -102,6 +134,10 @@ AWS gère entièrement le **control plane** (API server, etcd, scheduler, contro
 
 ### Pourquoi un seul NAT Gateway
 Arbitrage coût/résilience cohérent avec le budget limité d'InfoLine. Un NAT Gateway par AZ serait plus résilient mais deux fois plus coûteux. Décision à revoir en production réelle.
+
+**Faille assumée (single point of failure) :** avec `single_nat_gateway = true`, le module place l'unique NAT dans le premier subnet public de la liste (`10.0.101.0/24` → **eu-west-3a**), mais elle sert les deux subnets privés — le node de `eu-west-3b` route son trafic sortant **à travers l'AZ** pour l'atteindre (cf. schéma ci-dessus). Si `eu-west-3a` tombe : le node de `eu-west-3b` perd toute sortie Internet (plus de `docker pull` depuis ECR) → **plus aucun nouveau déploiement** possible, tandis que le trafic déjà en cours vers un pod survivant continue de répondre (l'entrant ELB → pod ne dépend pas de la NAT). Nommé explicitement plutôt que caché derrière l'argument « 2 AZ = résilient » : la résilience porte sur le *calcul* (nodes/pods), pas sur l'*egress*. Correctif de production : une NAT Gateway par AZ (coût doublé, assumé hors budget ECF).
+
+**Chiffré — ce que coûterait la 2ᵉ NAT (correctif) :** une NAT Gateway facture deux choses : une **charge horaire fixe** par passerelle déployée (≈ $0,059/h à Paris) et un **traitement de données** (≈ $0,059/Go), *tarifs publics approximatifs, à revérifier sur la AWS Pricing Calculator avant citation définitive dans la copie — même prudence que le chiffrage Lambda ci-dessous*. Une 2ᵉ NAT **double la charge horaire** (~$0,118/h au lieu de ~$0,059/h) mais **ne double pas** le traitement de données : le volume total de trafic sortant reste le même, juste réparti sur 2 passerelles — et il est de toute façon négligeable ici (images Docker petites, hello world). Sur un mois **entier en 24/7**, le surcoût serait d'environ **$43/mois**. Mais rapporté à l'usage réel du projet — EKS (et sa NAT) détruit chaque soir/week-end, ~112 h de budget total sur tout le projet — le surcoût réel tombe à environ **$6-7 pour l'ensemble du projet**. **Nuance honnête pour l'oral** : à ce niveau, l'argument « coût » pour justifier une seule NAT est correct mais budgétairement faible en absolu sur ce périmètre précis ; la vraie valeur du choix est de **démontrer un arbitrage coût/résilience explicite et documenté**, pas d'avoir réellement économisé une somme significative — la 2ᵉ NAT reste identifiée comme correctif de production, pas rejetée pour incapacité budgétaire réelle.
 
 ### Pourquoi des nodes en subnets privés
 Les nodes ne sont pas directement joignables depuis Internet. Seul le trafic entrant via un Load Balancer (subnet public) ou le NAT Gateway (sortie vers Internet) est autorisé. Réflexe sécurité de base : réduire la surface d'attaque.
@@ -355,93 +391,182 @@ La JVM Elasticsearch ne tient pas sur `t3.micro` (1 GiB) utilisé en Phase 1-3. 
 
 ---
 
-## Choix techniques et pourquoi
+## Choix techniques transverses
 
-### Pourquoi EKS + Lambda
+*Les décisions qui ne se rattachent pas à une brique en particulier, mais qui expliquent
+la forme d'ensemble de l'architecture.*
 
-> [BROUILLON — à réécrire par Julien]
+### Associer un cluster Kubernetes et du serverless
 
-Le sujet impose les deux (« API à déployer sur Kubernetes », « login en serverless »). Les
-faire **cohabiter** n'est pas subi : c'est le bon appariement de deux profils de charge à
-deux modèles de calcul.
+Le sujet impose les deux modèles : l'API sur Kubernetes, le login en serverless. Les faire
+cohabiter n'est pas une contrainte subie — c'est l'appariement de deux profils de charge
+très différents à deux modèles de calcul adaptés à chacun.
 
-- **API métier → EKS.** Service HTTP à durée de vie longue, trafic soutenu et prévisible,
-  qui bénéficie de la réplication, des sondes et du rolling update d'un orchestrateur. Un
-  cluster managé (control plane délégué à AWS) est le bon outil pour un workload qui *tourne
-  en continu*.
-- **Login → Lambda.** Fonction courte, sans état, invoquée par à-coups (pics à la connexion).
-  Le serverless facture à l'invocation, monte en charge tout seul et retombe à zéro coût sans
-  serveur allumé — inutile de maintenir un service permanent pour ça.
+**L'API métier tourne sur EKS.** C'est un service HTTP à durée de vie longue, au trafic
+soutenu et relativement prévisible. Il tire un bénéfice direct de ce qu'apporte un
+orchestrateur : réplication sur plusieurs pods, sondes de santé, remplacement progressif
+lors des mises à jour. Un cluster managé est l'outil adapté à une charge qui tourne en
+continu.
 
-Les deux ont des **modèles de facturation opposés** (EKS à l'heure, Lambda à l'usage) — c'est
-ce qui justifie de détruire `terraform/eks/` chaque soir mais pas `terraform/lambda-login/`
-(détail chiffré § « Service serverless — AWS Lambda »). Surtout, cette dualité sert directement
-l'exigence du sujet — *« séparer les applications pour diminuer le risque d'être hors service »* :
-un incident ou un pic sur le login (Lambda) n'a aucun effet sur l'API (EKS), et réciproquement.
-Ce cloisonnement du *blast radius* est le fil repris ci-dessous (« Loi de Conway »).
+**Le login tourne en Lambda.** C'est une fonction courte, sans état, invoquée par
+à-coups — les connexions arrivent par pics, pas de façon régulière. Le serverless facture
+à l'invocation, absorbe seul une montée en charge et retombe à zéro coût entre deux
+appels. Maintenir un serveur permanent pour cette fonction reviendrait à payer en
+continu une ressource utilisée par intermittence.
 
-Détail par brique : sections « Cluster Kubernetes — Amazon EKS » et « Service serverless — AWS
-Lambda (login) » plus haut.
+Ces deux modèles ont des **facturations opposées** : EKS coûte à l'heure dès que les
+nœuds tournent, Lambda ne coûte qu'à l'usage. C'est ce qui rend possible la discipline
+d'exploitation retenue sur ce projet — détruire `terraform/eks/` chaque soir, laisser
+`terraform/lambda-login/` en place — et c'est aussi la raison des deux états Terraform
+séparés.
 
-### Pourquoi Terraform
+Cette séparation répond enfin à une exigence explicite du contexte InfoLine :
+*« séparer les applications pour diminuer le risque d'être hors service »*. Un incident
+ou un pic de charge sur le login n'a aucun effet sur l'API, et réciproquement. Ce
+cloisonnement du rayon d'impact est le fil conducteur repris plus bas.
 
-> [BROUILLON — à réécrire par Julien]
+### Terraform comme outil d'infrastructure as code
 
 Le sujet demande d'automatiser la mise en place de l'infrastructure. Terraform est retenu
-comme outil **déclaratif** standard : on décrit l'état cible, l'outil calcule et applique le
-diff.
+pour son approche **déclarative** : on décrit l'état voulu, l'outil calcule l'écart avec
+l'existant et applique uniquement la différence.
 
-- **Raison opérationnelle propre à ce projet.** La discipline destroy/apply quotidienne (EKS
-  facturé à l'heure) n'est tenable *que* parce que l'infra est codifiée : reconstruire à la
-  main chaque matin un VPC + cluster + node group + IAM serait impraticable et source d'erreurs.
-  L'IaC transforme « réveiller l'infra » en un `terraform apply` reproductible (~15-20 min).
-- **State = source de vérité** de ce qui existe réellement côté AWS ; **plan avant apply** =
-  revue du diff avant toute mutation (fiche B1 P4 : lire le plan avant d'appliquer).
-- **Isolation par composant.** Un dossier + un state séparé par brique (`eks/`, `lambda-login/`,
-  `ecr/`, `iam-ci/`) : cycles de vie indépendants, blast radius d'un apply/destroy limité à une
-  brique, cohérent avec la séparation applicative (et avec Conway, ci-dessous). Contrepartie
-  assumée : pas de state distant ni de lock (backend S3 laissé commenté) — acceptable pour un
-  opérateur unique, à activer dès qu'on travaille à plusieurs.
-- **Réutilisation de modules communautaires** éprouvés (`terraform-aws-modules/vpc`, `.../eks`)
-  plutôt que réécrire des centaines de lignes de réseau et d'IAM (fiche B1 P4 : composants
-  isolés plutôt que copié-collé).
+**La raison la plus concrète est opérationnelle.** La discipline de destruction
+quotidienne — imposée par la facturation horaire d'EKS — n'est tenable *que* parce que
+l'infrastructure est décrite en code. Reconstruire à la main chaque matin un VPC, un
+cluster, un node group et les rôles IAM associés serait à la fois impraticable et une
+source d'erreurs permanente. L'IaC ramène le réveil de l'infrastructure à un
+`terraform apply` reproductible d'une quinzaine de minutes.
 
-Écarts déjà traités ailleurs : ECR créé hors Terraform puis réimporté (§ « Pourquoi ECR en
-IaC ») ; le Classic Load Balancer du Service `type: LoadBalancer` est créé par Kubernetes,
-**hors** Terraform — d'où le nettoyage manuel avant `destroy` (cf. `RUNBOOK.md`).
+**Le fichier d'état fait référence** sur ce qui existe réellement côté AWS, et la lecture
+du `plan` avant chaque `apply` donne une revue de ce qui va changer avant toute
+modification. C'est le garde-fou qui évite de découvrir une destruction accidentelle après
+coup.
+
+**L'isolation par composant** est le principe structurant : un dossier et un état séparés
+par brique — `eks/`, `lambda-login/`, `ecr/`, `iam-ci/`. Chaque brique a son cycle de vie
+propre, et le rayon d'impact d'un `apply` ou d'un `destroy` est limité à une seule d'entre
+elles. Contrepartie assumée : l'état reste local, sans stockage distant ni verrou (le
+backend S3 est laissé commenté). C'est acceptable pour un opérateur unique, et c'est la
+première chose à activer dès qu'on travaille à plusieurs.
+
+**Les modules communautaires éprouvés** (`terraform-aws-modules/vpc`,
+`terraform-aws-modules/eks`) sont préférés à une réécriture. Un cluster EKS fonctionnel
+mobilise une cinquantaine de ressources de réseau et d'IAM : les réécrire reviendrait à
+réintroduire des bugs déjà résolus. Les versions sont épinglées pour que le code ne dérive
+pas tout seul.
+
+**Deux éléments échappent volontairement à Terraform**, et sont traités ailleurs dans ce
+document : le dépôt ECR, créé à la main dans l'urgence puis réintégré par
+`terraform import` (section « Pourquoi ECR en IaC ») ; et le Classic Load Balancer, créé
+par Kubernetes lui-même en réponse au Service `type: LoadBalancer`, ce qui impose de le
+supprimer avant tout `destroy` sous peine de ressource orpheline facturée (procédure dans
+`RUNBOOK.md`).
 
 ### Pourquoi ELK pour la supervision (logs, pas métriques) → voir la section « Supervision par les logs — ELK » ci-dessus
 
-### Loi de Conway — pourquoi cette architecture reflète la structure d'équipe
-
-> [BROUILLON — à réécrire par Julien]
+### La découpe en composants et la loi de Conway
 
 *« Toute organisation qui conçoit un système produit une architecture qui calque sa propre
-structure de communication »* (Melvin Conway, 1968). La promo porte ce nom : le point n'est
-pas décoratif, il éclaire *pourquoi* l'architecture est découpée ainsi.
+structure de communication »* (Melvin Conway, 1968).
 
-Le sujet pose deux décisions **organisationnelles** avant toute technique : deux équipes montées
-(développement / DevOps) et la volonté explicite de *« séparer les applications pour diminuer le
-risque d'être hors service »*. L'architecture livrée épouse ces frontières :
+Ce principe éclaire directement la forme de l'architecture livrée. Le contexte InfoLine
+pose en effet deux décisions **organisationnelles** avant toute décision technique : deux
+équipes sont montées, l'une pour le développement et l'autre pour le DevOps, et la
+direction demande explicitement de *« séparer les applications pour diminuer le risque
+d'être hors service »*. L'architecture épouse ces frontières plutôt que de les ignorer.
 
-- **Des frontières techniques qui suivent des frontières de responsabilité.** Chaque brique
-  fonctionnelle est un composant autonome — dossier propre, artefact propre (image ECR, jar
-  Lambda, bundle Angular), cycle de vie propre : API métier, login, front principal, back-office,
-  supervision.
-- **Un cloisonnement réel, pas cosmétique.** Login en Lambda isolée de l'API sur EKS (panne et
-  scaling indépendants) ; fronts `frontend` (public) et `backoffice` (admin) séparés — deux
-  audiences, deux équipes potentielles ; supervision ELK déployée *hors* du pipeline CI de l'API
-  (`k8s/elk/`, jamais `k8s/`), donc une évolution de l'observabilité ne casse pas les déploiements
-  applicatifs.
-- **La même logique côté IaC.** States Terraform séparés par composant : chaque brique est
-  « possédable » par une équipe sans marcher sur les autres. Le pipeline volontairement découplé
-  de l'outil CI (portable GitHub Actions ↔ CircleCI) relève du même réflexe : ne rien souder qui
-  gagnerait à rester séparable.
+**Les frontières techniques suivent des frontières de responsabilité.** Chaque brique
+fonctionnelle est un composant autonome, avec son dossier, son artefact de déploiement
+— image ECR pour l'API, archive Java pour la Lambda, bundle statique pour les fronts — et
+son cycle de vie propre : API métier, login, front public, back-office, supervision.
 
-Conséquence défendable : ce système pourrait être **réparti entre équipes selon ses propres
-lignes de découpe** sans refonte — on structure l'architecture pour *rendre possible* l'organisation
-cible (l'« inverse Conway maneuver »), au lieu de la subir.
+**Le cloisonnement est réel, pas cosmétique.** Le login en Lambda est isolé de l'API sur
+EKS : leurs pannes et leurs montées en charge sont indépendantes. Les deux fronts
+`frontend` et `backoffice` sont séparés parce qu'ils servent deux audiences distinctes,
+et pourraient relever de deux équipes différentes. La supervision ELK est déployée **hors**
+du pipeline de l'API, dans `k8s/elk/` et jamais dans `k8s/`, de sorte qu'une évolution de
+l'observabilité ne puisse pas casser un déploiement applicatif.
 
-Honnêteté du périmètre : ici un **opérateur unique** porte tout le projet ; l'argument Conway est
-donc **prospectif** (comment cette découpe scalerait en équipes), pas le récit d'une organisation
-multi-équipes réellement vécue. Nommé pour ne pas le surinterpréter devant le jury.
+**La même logique gouverne l'infrastructure.** Les états Terraform séparés par composant
+font que chaque brique peut être prise en charge par une équipe sans empiéter sur les
+autres. Le pipeline lui-même a été conçu sans adhérence forte à son outil de CI, ce qui
+s'est vérifié en pratique : le passage de CircleCI à GitHub Actions n'a demandé aucune
+modification de l'infrastructure de CI côté AWS.
+
+La conséquence pratique est que ce système pourrait être **réparti entre plusieurs équipes
+selon ses propres lignes de découpe**, sans refonte préalable. C'est le raisonnement
+inverse de celui qu'on subit habituellement : structurer l'architecture pour rendre
+possible l'organisation cible, plutôt que de laisser l'organisation existante déformer
+l'architecture.
+
+**Une précision de périmètre s'impose.** Ce projet est porté par un opérateur unique.
+L'argument développé ici est donc **prospectif** — il décrit comment cette découpe
+supporterait une montée en équipes — et non le récit d'une organisation multi-équipes
+réellement vécue. Il est nommé comme tel pour ne pas être surinterprété.
+
+---
+
+## Bilan financier
+
+> ⚠️ **Méthodologie.** Les tarifs ci-dessous sont des **prix publics approximatifs** pour
+> `eu-west-3` (Paris), reconstitués de mémoire — **pas extraits d'AWS Cost Explorer**. Ils
+> consolident les chiffrages déjà donnés par composant (Lambda, NAT) et comblent le seul poste
+> jamais chiffré nulle part dans ce document : **le node group EC2 lui-même**. À revérifier sur
+> la [AWS Pricing Calculator] et, idéalement, remplacer par le montant réel de la facture AWS
+> (Billing → Cost Explorer) avant de citer un chiffre définitif dans la copie.
+
+### Coût par composant
+
+| Composant | Modèle de facturation | Tarif approx. (Paris) | Franchise gratuite connue |
+|---|---|---|---|
+| **Control plane EKS** | horaire fixe, quel que soit l'usage | ≈ $0,10/h | **Aucune** — jamais gratuit chez AWS, à aucun palier |
+| **Node group — 2× `t3.micro`** (Phases 1-3) | horaire, par instance | ≈ $0,0116/h/instance → **≈ $0,023/h** pour 2 | 750 h/mois de `t3`/`t2.micro` gratuites les 12 premiers mois d'un compte neuf — **à vérifier si déjà consommée sur ce compte** |
+| **Node group — 2× `m7i-flex.large`** (Phase 4+, pour ELK) | horaire, par instance | ≈ $0,113/h/instance → **≈ $0,226/h** pour 2 | Statut Free Tier **non confirmé** pour ce type malgré le flag `free-tier-eligible` (celui-ci garantit le **droit de lancer** sur ce compte restreint — cf. Friction 11 — pas nécessairement des heures **facturées $0** ; à vérifier en Billing Console avant de conclure) |
+| **NAT Gateway (unique)** | horaire + Go traités | ≈ $0,059/h + $0,059/Go | Aucune |
+| **Lambda `infoline-login`** | par requête + durée d'exécution | $0,20/M requêtes | 1M requêtes + 400 000 Go-secondes **gratuites en permanence** |
+| **API Gateway HTTP API** | par requête | $1/M requêtes | 1M requêtes gratuites les **12 premiers mois** du compte |
+| **ECR** (stockage images) | par Go-mois | ≈ $0,10/Go-mois | 500 Mo gratuits/mois les 12 premiers mois — image API ~92 Mo/tag, très en dessous |
+| **CloudWatch Logs** (Lambda) | par Go ingéré | ≈ $0,50-0,57/Go | volume d'un hello world invoqué occasionnellement : négligeable, non chiffré séparément |
+| **IAM** (`infoline-ci`, rôles, Access Entry) | — | **$0** | IAM est **toujours gratuit** chez AWS, quel que soit l'usage |
+
+### Coût horaire pendant une session active (EKS up)
+
+| Phase | Control plane | Node group | NAT | **Total ≈** |
+|---|---|---|---|---|
+| Phases 1-3 (`t3.micro`) | $0,10 | $0,023 | $0,059 | **≈ $0,18/h** |
+| Phase 4+ (`m7i-flex.large`, ELK) | $0,10 | $0,226 | $0,059 | **≈ $0,39/h** |
+
+### Coût réel estimé sur l'ensemble du projet
+
+Deux façons de le lire — c'est la deuxième qui compte, compte tenu de la discipline de
+`terraform destroy` quotidien :
+
+- **Si l'infra tournait 24/7 pendant un mois entier** (scénario délibérément **non représentatif**,
+  juste pour donner l'ordre de grandeur évité) : ≈ $130-280/mois selon la phase.
+- **Usage réel** — EKS (control plane + node group + NAT) actif seulement pendant les sessions de
+  travail, sur un budget total de **~112 h** réparties sur 16 jours ouvrés, puis détruit chaque
+  soir/week-end : entre `112 h × $0,18` et `112 h × $0,39` → **une fourchette d'environ $20 à $44
+  pour l'intégralité du projet**, selon la part du temps passée en Phase 4+ (nœuds plus gros).
+- **Postes quasi nuls, en continu tout le projet** (jamais détruits) : Lambda + API Gateway (trafic
+  hello world, largement couvert par la franchise gratuite) + ECR (quelques images de ~92 Mo) +
+  IAM ($0) → de l'ordre de **quelques centimes à 1-2 $** au total.
+
+**Total estimé du projet : de l'ordre de $20 à $45**, avant déduction d'éventuels crédits Free
+Tier sur la part EC2 (non confirmés — cf. tableau) et hors frais de transfert de données sortant
+(négligeables pour un trafic hello world).
+
+### Nuance honnête pour l'oral
+
+Le poste qui domine largement — **le control plane EKS** ($0,10/h fixe, quel que soit l'usage,
+jamais couvert par le Free Tier) — explique à lui seul pourquoi la discipline de `terraform
+destroy` quotidien est **la** décision budgétaire structurante du projet, bien plus que le choix
+NAT unique vs double (§ « Pourquoi un seul NAT Gateway » : quelques dollars d'écart sur tout le
+projet) ou le choix Lambda vs serveur permanent (quasi gratuit dans les deux cas à ce volume).
+**Le vrai levier de coût sur cette architecture, c'est la durée pendant laquelle EKS existe**, pas
+tel ou tel paramètre fin à l'intérieur — ce que confirme d'ailleurs le tableau `RUNBOOK.md` §0
+(seul `terraform/eks/` est marqué destroy quotidien **obligatoire**).
+
+**Prochaine étape recommandée avant de citer un chiffre définitif dans la copie :** consulter
+*AWS Billing → Cost Explorer* pour remplacer cette estimation par le montant **réellement
+facturé** — la seule source qui rend ce chiffre incontestable devant le jury.
