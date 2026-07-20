@@ -1,20 +1,32 @@
-# scripts — reconstruction centralisée (RTO)
+# scripts — reconstruction centralisée de l'infrastructure
 
 > ⚠️ **Statut : non validé en conditions réelles.**
 > Ces scripts orchestrent en un seul point ce que `RUNBOOK.md` décrit pas-à-pas — cette
 > procédure manuelle étant, elle, **validée**. Les scripts n'ont pas encore été exécutés de
-> bout en bout : leur validation, et avec elle la **mesure effective du RTO**, est prévue au
-> run final du **22 juillet 2026**.
+> bout en bout ; leur validation est prévue au run du **22 juillet 2026**.
 >
-> En conséquence : **aucun chiffre de RTO ne doit être communiqué** tant que `rebuild.sh`
-> n'a pas réellement tourné, et le chemin de référence garanti reste `RUNBOOK.md`.
+> Le chemin de référence garanti reste `RUNBOOK.md`.
 
 ## Pourquoi
 
-Un DevOps doit pouvoir **chiffrer le temps de remise en route** de l'infra après incident
-(RTO — Recovery Time Objective). Ces scripts rejouent `apply` / `destroy` dans le bon ordre
-de dépendance et **mesurent le temps de reconstruction**, plutôt que de dérouler le RUNBOOK
-à la main. Cf. `architecture.md` § « Pourquoi un script de reconstruction centralisé (RTO) ».
+L'infrastructure est détruite chaque soir (les nœuds EKS sont facturés à l'heure). Elle doit
+donc pouvoir être **reconstruite intégralement, dans le bon ordre, sans intervention
+manuelle** — c'est la contrepartie de cette discipline, et la démonstration la plus directe
+de ce qu'apporte l'infrastructure as code.
+
+Ces scripts rejouent `apply` / `destroy` dans l'ordre de dépendance (ECR → IAM-CI → Lambda
+→ EKS) et prennent en charge deux pièges que le RUNBOOK ne décrit qu'en prose : la
+recompilation du jar Lambda **avant** le `terraform apply`, et le rafraîchissement du
+kubeconfig après recréation du cluster.
+
+Cf. `architecture.md` § « Pourquoi un script de reconstruction centralisé ».
+
+## Sur la durée affichée
+
+`rebuild.sh` affiche le temps écoulé, **à titre indicatif d'exploitation**. Ce n'est pas un
+RTO : une garantie de temps de reprise supposerait un objectif de perte de données associé
+(RPO), or la supervision utilise un stockage éphémère et l'état Terraform est local, sans
+sauvegarde. Aucun engagement de reprise après sinistre n'est formulé sur ce périmètre.
 
 ## Scripts
 
@@ -47,8 +59,8 @@ Variables surchargeables : `AWS_REGION` (défaut `eu-west-3`), `CLUSTER_NAME` (d
   Actions). `rebuild.sh` reconstruit l'infra puis **rappelle** ce push ; il propose en option
   (`--deploy-api-manual`) le déploiement manuel du RUNBOOK §4 à partir de la dernière image ECR.
 - **Séquentiel** : EKS (~15-20 min) est lancé après les autres briques. Le paralléliser
-  réduirait le RTO horloge — optimisation volontairement non faite tant que le script n'est pas
-  validé.
+  raccourcirait la reconstruction — optimisation volontairement non faite tant que le script
+  n'est pas validé.
 - **Kubeconfig** : chaque reconstruction du cluster change l'endpoint → `rebuild.sh` refait
   `aws eks update-kubeconfig` (piège RUNBOOK §8).
 - **ELB orphelin** : `teardown.sh` fait `kubectl delete -f k8s/` avant le destroy EKS (RUNBOOK §7).

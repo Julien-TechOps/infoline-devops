@@ -136,8 +136,10 @@ nommé pour ne pas passer pour un oubli ; le « pourquoi » détaillé est dans
   survivent pas à un `destroy`, acceptable pour un cluster éphémère. En cible : PVC gp3 + réplicas.
 - **Supervision = détection visuelle**, pas d'alerting push (Watcher / Kibana Alerting) : la
   « notification » du sujet est interprétée comme un dysfonctionnement **visible dans Kibana**.
-- **RTO non encore mesuré** : les scripts `scripts/rebuild.sh` / `teardown.sh` centralisent la
-  reconstruction mais restent à **valider et chronométrer** au run final (22 juil).
+- **Reconstruction automatisée non encore validée** : les scripts `scripts/rebuild.sh` /
+  `teardown.sh` centralisent la reconstruction mais restent à **exécuter de bout en bout** au
+  run final (22 juil). Aucun engagement de reprise après sinistre (RTO/RPO) n'est formulé :
+  le sujet ne le demande pas, et le stockage éphémère de la supervision ne le permettrait pas.
 
 ---
 
@@ -172,7 +174,6 @@ nommé pour ne pas passer pour un oubli ; le « pourquoi » détaillé est dans
 | **Rolling update** | Remplacement progressif des pods d'un déploiement, sans coupure. |
 | **ELK / ECK** | Stack de logs (Elasticsearch + Kibana) ; ECK = son opérateur Kubernetes. |
 | **DaemonSet** | Un pod par nœud (ici Filebeat, pour lire les logs de chaque nœud). |
-| **RTO** (*Recovery Time Objective*) | Temps de remise en route de l'infra après destruction/incident. |
 | **Free Tier** | Palier gratuit AWS ; ici, il restreint les types d'instance lançables. |
 
 ---
@@ -186,4 +187,4 @@ nommé pour ne pas passer pour un oubli ; le « pourquoi » détaillé est dans
 - **Copie par question** : `doc_project/{A1-Q1..A3-Q2}_synthese.md`.
 - **Journal & suivi** : [FRICTIONS.md](FRICTIONS.md), [backlog.md](backlog.md),
   [sujet_ECF.md](sujet_ECF.md), `doc_project/captures/`.
-- **Reconstruction (RTO)** : `scripts/` (brouillon, à valider au run du 22 juil).
+- **Reconstruction automatisée** : `scripts/` (à valider au run du 22 juil).

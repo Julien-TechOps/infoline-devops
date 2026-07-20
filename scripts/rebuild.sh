@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# rebuild.sh — reconstruction centralisée de l'infra InfoLine (mesure du RTO)
+# rebuild.sh — reconstruction centralisée de l'infra InfoLine
 #
-# ⚠️ BROUILLON Phase 5 — NON testé de bout en bout (validation prévue au run du 22 juil).
-#    Dérivé de RUNBOOK.md (procédure validée manuellement). Ne PAS communiquer de RTO
-#    mesuré tant que ce script n'a pas tourné en conditions réelles.
+# ⚠️ NON testé de bout en bout (validation prévue au run du 22 juil).
+#    Dérivé de RUNBOOK.md (procédure validée manuellement), qui reste le chemin de
+#    référence garanti. La durée affichée en fin de run est indicative : ce n'est pas
+#    un RTO (aucun objectif de perte de données associé — cf. scripts/README.md).
 #
 # Reconstruit dans l'ordre de dépendance : ECR → IAM-CI → Lambda → EKS, puis rafraîchit
 # kubectl. Le déploiement de l'API se fait ensuite via CI (git push) — voir la fin du script.
@@ -77,7 +78,7 @@ kubectl get nodes
 
 END_TS=$(date +%s)
 ELAPSED=$(( END_TS - START_TS ))
-log "Infra reconstruite en ${ELAPSED}s (~$(( ELAPSED / 60 )) min) — RTO infra indicatif"
+log "Infra reconstruite en ${ELAPSED}s (~$(( ELAPSED / 60 )) min) — durée indicative"
 
 # --- 5. Déploiement de l'API ----------------------------------------------
 if [ "$DEPLOY_API_MANUAL" -eq 1 ]; then
