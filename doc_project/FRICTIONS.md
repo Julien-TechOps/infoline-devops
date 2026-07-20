@@ -655,8 +655,6 @@ fin de phase, des faits datés survivent comme s'ils étaient l'état réel du r
   de Conway** — livrées en **BROUILLON balisé**, à réécrire/s'approprier avant soutenance.
 - **Repo structuré** : 7 READMEs de sous-dossiers (`api/`, `k8s/`, `k8s/elk/`, `terraform/` +
   `ecr/` + `iam-ci/`, `lambda-login/`), lock `s3-test` désuivi (aligné sur `.gitignore`).
-- **Scripts RTO** `scripts/rebuild.sh` + `teardown.sh` (dérivés du RUNBOOK) — **non testés**, à
-  valider et chronométrer au run du 22 juil.
 
 ### Leçon
 Un jury croise le **code** et la **copie** : chaque affirmation doit correspondre au réel *au moment
@@ -671,7 +669,6 @@ cosmétique — c'est elle qui débusque les faits périmés qu'aucune session t
 ## POINTS DE VIGILANCE POUR LA SUITE
 - **Brouillons à s'approprier** : les 3 sections « pourquoi » (surtout Conway) doivent être réécrites
   par moi — ne pas les défendre telles quelles.
-- **Scripts RTO non testés** : ne communiquer aucun chiffre de RTO avant le run réel du 22 juil.
 - **Capture du schéma** : produire le PNG du rendu Mermaid (`A?-schema-architecture.png`) pour la copie.
 
 ---
@@ -704,8 +701,8 @@ documentaire du dépôt.
   lecture chiffré, et **définition explicite du périmètre de la documentation technique**
   (`architecture.md` + `RUNBOOK.md` + READMEs de sous-dossiers ; `doc_project/` = annexes de
   conduite de projet).
-- **Marqueurs BROUILLON** : levé dans `bilan.md` (c'était une note à moi-même, le document est
-  abouti) ; **conservé et reformulé** dans `scripts/README.md`.
+- **Marqueur BROUILLON** levé dans `bilan.md` (c'était une note à moi-même, le document est
+  abouti).
 
 ## Friction 13 — deux sorties de commande reconstituées au lieu d'être lues
 
@@ -750,7 +747,6 @@ Points laissés ouverts, à trancher avant le collage dans le Word :
 - **Vérification visuelle des PNG Kibana** avant collage (`cloud.account.id` possible dans les
   documents Discover — un grep ne voit rien dans une image).
 - **Lien Git à tester en navigation privée** : un dépôt privé donne une 404 au correcteur.
-- **Scripts RTO toujours non testés** — aucun chiffre de RTO avant le run du 22 juil.
 - **Capture du schéma d'architecture : action abandonnée** (annule et remplace le point de
   vigilance du 15 juil). Le schéma Mermaid est trop large pour rester lisible sur une page de
   Word ; il reste consulté dans le dépôt, où GitHub le rend nativement. Le lien Git étant

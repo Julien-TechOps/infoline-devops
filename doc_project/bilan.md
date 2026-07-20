@@ -136,10 +136,6 @@ nommé pour ne pas passer pour un oubli ; le « pourquoi » détaillé est dans
   survivent pas à un `destroy`, acceptable pour un cluster éphémère. En cible : PVC gp3 + réplicas.
 - **Supervision = détection visuelle**, pas d'alerting push (Watcher / Kibana Alerting) : la
   « notification » du sujet est interprétée comme un dysfonctionnement **visible dans Kibana**.
-- **Reconstruction automatisée non encore validée** : les scripts `scripts/rebuild.sh` /
-  `teardown.sh` centralisent la reconstruction mais restent à **exécuter de bout en bout** au
-  run final (22 juil). Aucun engagement de reprise après sinistre (RTO/RPO) n'est formulé :
-  le sujet ne le demande pas, et le stockage éphémère de la supervision ne le permettrait pas.
 
 ---
 
@@ -187,4 +183,3 @@ nommé pour ne pas passer pour un oubli ; le « pourquoi » détaillé est dans
 - **Copie par question** : `doc_project/{A1-Q1..A3-Q2}_synthese.md`.
 - **Journal & suivi** : [FRICTIONS.md](FRICTIONS.md), [backlog.md](backlog.md),
   [sujet_ECF.md](sujet_ECF.md), `doc_project/captures/`.
-- **Reconstruction automatisée** : `scripts/` (à valider au run du 22 juil).

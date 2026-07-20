@@ -295,41 +295,6 @@ confiance). Non retenu ici pour respecter le timeboxing (les clés `infoline-ci`
 déjà en place et fonctionnelles) ; noté comme durcissement de production possible, au même
 titre que S3+CloudFront pour le front ou un ALB via contrôleur dédié.
 
-### Pourquoi un script de reconstruction centralisé
-
-L'infrastructure est détruite chaque soir pour ne pas payer les nœuds EKS à l'heure. Elle
-doit donc pouvoir être **reconstruite intégralement, dans le bon ordre, sans intervention
-manuelle** — c'est la contrepartie de cette discipline, et c'est aussi la démonstration la
-plus directe de ce qu'apporte l'IaC.
-
-L'ordre de dépendance n'est pas trivial : ECR → IAM-CI → Lambda → EKS. Ces composants ont
-des états Terraform indépendants, mais tous doivent exister avant le déploiement
-applicatif. Deux pièges s'y ajoutent, tous deux vécus : le jar de la Lambda doit être
-recompilé **avant** le `terraform apply` (Terraform ne lit que le hash d'un fichier
-existant), et l'endpoint du cluster change à chaque reconstruction, ce qui impose de
-rafraîchir le kubeconfig. Le RUNBOOK décrit ces étapes en prose ; le script les rend
-exécutables.
-
-La destruction est volontairement scindée en deux : **destroy quotidien** (EKS seul, le
-seul composant facturé à l'heure) et **destroy complet** (`--full` : EKS + Lambda + ECR,
-fin de projet). Les séparer évite de détruire par erreur des ressources facturées à
-l'usage, qui ne coûtent rien à laisser en place.
-
-Concrétisé dans `scripts/rebuild.sh` et `scripts/teardown.sh`, qui orchestrent les étapes
-déjà validées du `RUNBOOK.md`.
-
-**Statut : scripts non encore exécutés de bout en bout**, validation prévue au run du
-22 juillet. Le chemin de référence garanti reste le `RUNBOOK.md`.
-
-**Sur la durée de reconstruction.** Le script affiche le temps écoulé, à titre indicatif
-d'exploitation : l'opération prend une quinzaine de minutes, dominées par le
-provisionnement du control plane EKS — une constante du fournisseur, pas une
-caractéristique de ce projet. Ce chiffre **n'est pas présenté comme un RTO** : une garantie
-de temps de reprise n'aurait de sens qu'accompagnée d'un objectif de perte de données
-(RPO), or la supervision utilise un stockage `emptyDir` et l'état Terraform est local, sans
-sauvegarde. Aucun engagement de reprise après sinistre n'est donc formulé — ce n'est ni
-demandé par le sujet, ni soutenable sur ce périmètre.
-
 ## Applications Front — Angular (principal + backoffice)
 
 ### Ce qui est réalisé

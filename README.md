@@ -16,7 +16,7 @@ technique**. Voici l'ordre de lecture conseillé.
 |---|---|---|---|
 | 1 | [`architecture.md`](architecture.md) | Schéma d'architecture global, puis le « pourquoi » de chaque choix technique | ~20 min |
 | 2 | [`RUNBOOK.md`](RUNBOOK.md) | Comment construire, détruire et reconstruire l'infrastructure — la preuve de reproductibilité | ~10 min |
-| 3 | READMEs de sous-dossiers | Détail d'usage de chaque brique (`terraform/*/`, `api/`, `apps/`, `k8s/`, `scripts/`) | à la demande |
+| 3 | READMEs de sous-dossiers | Détail d'usage de chaque brique (`terraform/*/`, `api/`, `apps/`, `k8s/`) | à la demande |
 
 **Périmètre de la documentation technique.** Elle est constituée des trois entrées
 ci-dessus, et d'elles seules.
