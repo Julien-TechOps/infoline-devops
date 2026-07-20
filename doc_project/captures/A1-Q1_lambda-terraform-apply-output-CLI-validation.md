@@ -193,7 +193,7 @@ Do you want to perform these actions?
 
 aws_iam_role.lambda_exec: Creating...
 aws_apigatewayv2_api.login: Creating...
-aws_apigatewayv2_api.login: Creation complete after 2s [id=imo88c74dg]
+aws_apigatewayv2_api.login: Creation complete after 2s [id=<API_ID>]
 aws_apigatewayv2_stage.default: Creating...
 aws_iam_role.lambda_exec: Creation complete after 2s [id=infoline-login-exec-role]
 aws_iam_role_policy_attachment.lambda_logs: Creating...
@@ -213,12 +213,12 @@ Apply complete! Resources: 8 added, 0 changed, 0 destroyed.
 
 Outputs:
 
-api_endpoint = "https://imo88c74dg.execute-api.eu-west-3.amazonaws.com"
+api_endpoint = "https://<API_ID>.execute-api.eu-west-3.amazonaws.com"
 function_arn = "arn:aws:lambda:eu-west-3:<ACCOUNT_ID>:function:infoline-login"
 function_name = "infoline-login"
-invoke_url = "https://imo88c74dg.execute-api.eu-west-3.amazonaws.com//login"
+invoke_url = "https://<API_ID>.execute-api.eu-west-3.amazonaws.com//login"
 julien@Julien:~/infoline-devops/terraform/lambda-login$ terraform output invoke_url
-"https://imo88c74dg.execute-api.eu-west-3.amazonaws.com//login"
+"https://<API_ID>.execute-api.eu-west-3.amazonaws.com//login"
 julien@Julien:~/infoline-devops/terraform/lambda-login$ terraform output function_name
 "infoline-login"
 julien@Julien:~/infoline-devops/terraform/lambda-login$ curl -s "$(terraform output -raw invoke_url)"
@@ -333,8 +333,8 @@ julien@Julien:~/infoline-devops/terraform/lambda-login$ aws iam list-attached-ro
 julien@Julien:~/infoline-devops/terraform/lambda-login$ aws apigatewayv2 get-apis --query "Items[?Name=='infoline-login-api']" --no-cli-pager
 [
     {
-        "ApiEndpoint": "https://imo88c74dg.execute-api.eu-west-3.amazonaws.com",
-        "ApiId": "imo88c74dg",
+        "ApiEndpoint": "https://<API_ID>.execute-api.eu-west-3.amazonaws.com",
+        "ApiId": "<API_ID>",
         "ApiKeySelectionExpression": "$request.header.x-api-key",
         "CreatedDate": "2026-07-02T11:55:21+00:00",
         "DisableExecuteApiEndpoint": false,

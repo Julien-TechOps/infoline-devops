@@ -726,8 +726,7 @@ d'une reconstitution — même quand la valeur « paraît évidente ».
 ## Écart de méthode conservé (non résolu ce jour)
 
 Points laissés ouverts, à trancher avant le collage dans le Word :
-- **Anonymisation incohérente** : les transcrits masquent `<ACCOUNT_ID>` et `<SG_DEFAULT_ID>`,
-  mais l'ID API Gateway (`imo88c74dg`) et les DNS d'ELB apparaissent en clair dans la copie.
+- ~~**Anonymisation incohérente**~~ — **résolu le 20 juil** (voir ci-dessous).
 - **Double slash de l'`invoke_url`** : le transcrit affiche `…amazonaws.com//login` (stage
   `$default` + `route_path`), normalisé à un seul slash dans la copie — écart copie/capture.
 - **Deux affirmations déduites à vérifier** : `maxSurge: 0` motivé par le nombre de pods par
@@ -753,3 +752,32 @@ Points laissés ouverts, à trancher avant le collage dans le Word :
   introduction de l'Activité 1. Le nom de fichier envisagé (`A?-schema-architecture.png`)
   posait par ailleurs deux problèmes : un `?` insoluble (le schéma ne se rattache à aucune
   question) et un placement dans `captures/`, réservé aux preuves brutes.
+
+## Passe d'anonymisation (20 juil) — audit complet des 51 preuves
+
+Audit systématique des 23 transcrits `.md` et contrôle visuel des PNG sensibles, avant
+montage du Word.
+
+**Résultat : aucune information confidentielle n'était exposée.** Les transcrits masquaient
+déjà `<ACCOUNT_ID>`, `<IAM_USER>`, `<OIDC_HASH>`, `<SG_DEFAULT_ID>` ; aucun secret, aucun
+token, aucune IP publique, aucune URL de registre ECR. Côté images : en-tête de compte
+masqué à la main sur la console AWS, cadrage excluant l'URI du dépôt sur ECR, colonnes
+Discover réduites et UUID floutés sur Kibana.
+
+**Vérification du risque réel sur les 3 identifiants restants** (2 DNS d'ELB + 1 ID d'API
+Gateway) : tous pointaient vers des ressources **détruites**. L'état Terraform d'EKS contient
+0 ressource (cluster détruit, ELB avec). Et l'API Gateway capturée le 2 juil (`imo88c74dg`)
+a été détruite et recréée depuis — l'API vivante porte un autre ID, absent de toute capture.
+Le `curl` sur l'ancienne URL ne répond pas.
+
+**Décision : masquer quand même**, pour une raison de **cohérence documentaire et non de
+sécurité**. Une rédaction partielle (`<ACCOUNT_ID>` masqué ligne 10, DNS complet ligne 40)
+se lit comme un oubli ; une rédaction uniforme se lit comme une politique. Deux placeholders
+ajoutés : `<API_ID>` et `<ELB_DNS>`, appliqués aux captures **et** aux trois fichiers de
+copie pour qu'ils restent alignés.
+
+### Leçon
+Distinguer le risque réel du signal envoyé. Ici le risque était nul — les ressources
+n'existaient plus — mais l'incohérence de rédaction restait visible et coûtait en crédibilité.
+Vérifier l'état réel des ressources (`terraform.tfstate`, `aws ... get-*`) avant de traiter un
+identifiant comme sensible évite autant la panique inutile que la négligence.
