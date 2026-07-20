@@ -110,7 +110,9 @@ flowchart TB
 > `fiches-essentielles/exercice-reseau-vpc.md` (partie B). Correctif de prod identifié : une NAT
 > par AZ (§ « Pourquoi un seul NAT Gateway » ci-dessous).
 >
-> Capture pour la copie : `A?-schema-architecture.png` (rendu GitHub du bloc ci-dessus).
+> Ce schéma n'est **pas exporté en image dans la copie** : trop large pour rester lisible sur
+> une page, il est consulté directement dans le dépôt, où GitHub le rend automatiquement. La
+> copie y renvoie en introduction de l'Activité 1.
 
 ## Choix techniques par composant
 

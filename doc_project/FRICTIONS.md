@@ -746,4 +746,10 @@ Points laissés ouverts, à trancher avant le collage dans le Word :
   documents Discover — un grep ne voit rien dans une image).
 - **Lien Git à tester en navigation privée** : un dépôt privé donne une 404 au correcteur.
 - **Scripts RTO toujours non testés** — aucun chiffre de RTO avant le run du 22 juil.
-- **Capture du schéma d'architecture** (`A?-schema-architecture.png`) toujours à produire.
+- **Capture du schéma d'architecture : action abandonnée** (annule et remplace le point de
+  vigilance du 15 juil). Le schéma Mermaid est trop large pour rester lisible sur une page de
+  Word ; il reste consulté dans le dépôt, où GitHub le rend nativement. Le lien Git étant
+  lui-même un livrable noté, le renvoi est cohérent. La copie y renvoie explicitement en
+  introduction de l'Activité 1. Le nom de fichier envisagé (`A?-schema-architecture.png`)
+  posait par ailleurs deux problèmes : un `?` insoluble (le schéma ne se rattache à aucune
+  question) et un placement dans `captures/`, réservé aux preuves brutes.
