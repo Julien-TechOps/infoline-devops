@@ -29,8 +29,8 @@ sans déploiement (le sujet A2-Q5 s'arrête à « build/test ») :
 - **`npm ci` (pas `npm install`)** : install reproductible depuis le lockfile exact (fiche B2 P1).
 - **Node 24 en CI = Node 24 en local et dans l'image Docker** : rapprochement dev/exécution.
 - **`ng test --watch=false`** : exécution one-shot (pas de watcher interactif) adaptée à la CI ; runner
-  **Vitest** (défaut Angular 22 — le flag Karma `--browsers` a été retiré car incompatible, cf.
-  `FRICTIONS.md`).
+  **Vitest** (défaut Angular 22 — le flag `--browsers=ChromeHeadless`, hérité de Karma, a été retiré car
+  non reconnu par Vitest : commit `2ec034d`).
 - **Pas de déploiement** : contrairement à A2-Q3 (« déployez sur le kube »), A2-Q5 s'arrête à
   build/test — aucun verbe « déployez » ni infra cible. Cadrage détaillé dans `A2-Q4_synthese.md`.
 

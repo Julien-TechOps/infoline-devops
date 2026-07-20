@@ -729,8 +729,14 @@ Points laissés ouverts, à trancher avant le collage dans le Word :
 - ~~**Anonymisation incohérente**~~ — **résolu le 20 juil** (voir ci-dessous).
 - **Double slash de l'`invoke_url`** : le transcrit affiche `…amazonaws.com//login` (stage
   `$default` + `route_path`), normalisé à un seul slash dans la copie — écart copie/capture.
-- **Deux affirmations déduites à vérifier** : `maxSurge: 0` motivé par le nombre de pods par
-  nœud (et non la mémoire) ; flag Karma retiré = `--browsers=ChromeHeadless`.
+- ~~**Deux affirmations déduites à vérifier**~~ — **vérifiées le 20 juil, les deux exactes.**
+  `maxSurge: 0` est bien motivé par la **limite de pods par nœud** (plafond ENI/CNI de 4 pods
+  sur `t3.micro`, erreur `Too many pods`), pas par la mémoire — source : Friction 10. Le flag
+  retiré est bien `--browsers=ChromeHeadless` — source : commit `2ec034d`. Les deux formulations
+  de la copie ont été précisées et sourcées.
+  **Défaut découvert au passage** : `A2-Q5_synthese.md` renvoyait à `FRICTIONS.md` pour le flag
+  Karma, alors qu'aucune entrée du journal ne le mentionne — renvoi mort, corrigé en pointant
+  le commit.
 
 ## CE QUI EST ACQUIS — PHASE 5 (J2)
 - Les 7 questions ECF sont rédigées de bout en bout, structure homogène, chaque preuve pointée
