@@ -1,6 +1,6 @@
 # Backlog — ECF DevOps InfoLine (miroir de Roadmap_ECF_DevOps_v4)
 
-**Dernière mise à jour :** Lun 20 juil 2026
+**Dernière mise à jour :** Lun 20 juil 2026 (fin de session)
 
 ## Légende
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
@@ -27,6 +27,18 @@ Mer 15 juil : **consolidation A3 (J3)** — boucle d'observabilité fermée sur 
 
 Lun 20 juil : **Phase 5 J2 — copie rédigée de bout en bout et dépôt clôturé côté doc.** Les **7 questions ECF** rédigées (A1, A2 **et A3**, cette dernière en avance sur le 21) dans `fiches-essentielles/copie/` (**hors Git**, brouillons de transfert vers le Word qui devient la source de vérité). Structure homogène pour les 7 : *demandé → réponse → code → preuve → pourquoi → écarts*. **Captures triées pour le Word : 17 PNG retenus sur 28**, colonne 📌/○/— dans chaque tableau ; les 23 `.md` sont des transcrits à coller en texte, pas en image. **`architecture.md` assaini** : titre `## Choix techniques et pourquoi` en **double** (l.115/l.389) → « par composant » / « transverses » ; **3 sections BROUILLON réécrites** (EKS+Lambda, Terraform, Conway). **`README.md`** : section « Par où commencer (jury) » + **périmètre de la doc technique explicité** (`architecture.md` + `RUNBOOK.md` + READMEs ; `doc_project/` = annexes). Marqueur BROUILLON levé dans `bilan.md`, **conservé** dans `scripts/README.md` (scripts réellement non testés). **Friction 13** : deux sorties `kubectl` reconstituées de mémoire dans A3, détectées et corrigées — règle posée, tout bloc terminal de la copie doit venir de `captures/`. Reste : trancher l'anonymisation (ID API Gateway + DNS ELB en clair), vérifier 2 affirmations déduites (`maxSurge`, flag Karma), produire le PNG du schéma.
 
+### Décisions arrêtées pour le run du 21 juil
+1. **`teardown.sh` sans `--full`.** L'option `--full` détruit `terraform/iam-ci/`, qui porte un
+   `aws_iam_access_key` : le rebuild recréerait l'utilisateur CI avec des **clés neuves**, non
+   présentes dans les secrets GitHub → pipeline en échec d'authentification, et réglage manuel
+   obligatoire. Incompatible avec l'objectif « sans intervention manuelle ».
+2. **ELK hors périmètre du run.** `rebuild.sh` couvre ECR → IAM-CI → Lambda → EKS ; la stack ELK
+   est déployée manuellement par conception (`k8s/elk/` isolé du pipeline, cf. A3-Q1). L'inclure
+   supposerait d'étendre le script à moins de 48 h du dépôt. A3 est déjà démontré et capturé ;
+   le run valide la reproductibilité de l'infra et de la chaîne de déploiement (A1 + A2).
+3. **Les deux scripts n'ont jamais tourné.** Garder `RUNBOOK.md` ouvert en parallèle : c'est le
+   chemin de secours en cas d'échec, et il est validé.
+
 ## Avancement par phase
 
 | Date | Phase | Question ECF | Objectif (PRO) | Infra | Doc | Captures |
@@ -45,6 +57,9 @@ Lun 20 juil : **Phase 5 J2 — copie rédigée de bout en bout et dépôt clôtu
 | 20 juil | Phase 5 — Copie A1+A2 | A1 · A2 | Rédaction copie, Activités 1 et 2 | — | ✅ | ✅ |
 | 20 juil (avance) | Phase 5 — Copie A3 | A3 | Rédaction copie A3 (créneau initial 21 juil) | — | ✅ | ✅ |
 | 20 juil (avance) | Phase 5 — Clôture dépôt | Toutes | Brouillons `architecture.md` réécrits, titre en double corrigé, porte d'entrée README, tri des captures pour le Word | — | ✅ | — |
-| 21 juil | Phase 5 — Mise en forme | Toutes | Collage dans le Word + insertion des 17 PNG retenus + relecture globale | — | ❌ | ❌ |
-| 22 juil (matin) | Phase 5 — Tampon final | Selon trous | Rattrapages avant le run, vérif des 3 livrables | — | ❌ | ❌ |
-| 22 juil (après-midi) | Finalisation | Toutes | Run complet (destroy+rebuild sans intervention manuelle) + dépôt | ❌ | ❌ | ❌ |
+| 21 juil (matin) | Run de validation | A1 · A2 | `teardown.sh` (**sans `--full`**) puis `rebuild.sh` + déploiement API par pipeline GHA — objectif : run **sans intervention manuelle**. Premier passage réel des deux scripts. Périmètre : infra + API (**ELK hors run**, cf. décision ci-dessous) | ❌ | — | ❌ |
+| 21 juil (matin) | Finalisation dépôt | Toutes | Correction des frictions détectées au run + **documentation du script de déploiement** (`scripts/README.md`, RUNBOOK) | — | ❌ | — |
+| 21 juil (après-midi) | Mise en forme livrable | Toutes | Montage du Word ECF (nomenclature `ECF_BDOps_Hiver2025_copiearendre_Youssefi_Julien`), collage des 3 copies, insertion des **17 PNG**, **lien Git inséré dans le document** | — | ❌ | ❌ |
+| 21 juil (soir) | Hygiène | — | **`teardown.sh` après le run** — ne pas laisser le cluster facturé la nuit | ❌ | — | — |
+| 21 juil (après-midi) | Contrôle croisé | Toutes | Relecture du Word par Claude.ai + test du lien Git **en navigation privée** | — | ❌ | — |
+| 22 juil (matin) | Relecture finale et livraison | Toutes | Dernière relecture, vérification des 3 livrables, **dépôt** (échéance 23 juil — un jour de marge) | — | ❌ | — |
