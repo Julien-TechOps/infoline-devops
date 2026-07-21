@@ -187,7 +187,7 @@ Tout **push sur `main`** lance deux workflows :
 - Attendre les **deux workflows verts**.
   - 📸 **Capture** `A2-Q3_pipeline-green.png` — run *Deploy API to EKS* vert.
   - 📸 **Capture** `A2-Q5_pipeline-green.png` — run *Build & Test Angular Apps* vert (matrice 2 apps).
-  - 📸 **Capture** `A2-Q5_build-test-logs.png` — logs des steps *Build* + *Run tests* (`ng build` /
+  - 📸 **Capture** `A2-Q5_build-test-logs-ex-frontend.png` — logs des steps *Build* + *Run tests* (`ng build` /
     `ng test --watch=false`) des deux apps.
 - Noter l'état initial :
   ```bash
