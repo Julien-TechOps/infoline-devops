@@ -690,7 +690,7 @@ documentaire du dépôt.
   (gitignoré, cf. `.gitignore:35`). Ce sont des **brouillons de transfert** vers le Word, qui
   devient la source de vérité de la copie — pas un quatrième foyer documentaire.
 - **Captures triées pour le Word** : chaque tableau de captures porte désormais une colonne
-  indiquant 📌 obligatoire / ○ recommandé / — référence seule. **17 PNG retenus sur 28.**
+  indiquant 📌 obligatoire / ○ recommandé / — référence seule. **23 PNG retenus sur 28 (16 obligatoires + 7 recommandées).**
   Distinction posée : les 23 fichiers `.md` sont des transcrits terminal, à coller **en texte
   à chasse fixe**, jamais en image.
 - **`architecture.md` assaini** : titre `## Choix techniques et pourquoi` présent **en double**
