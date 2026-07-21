@@ -1,4 +1,4 @@
-// api/src/main/java/com/infoline/api/HelloController.java (redeploy no-op — run de validation 21 juil)
+// api/src/main/java/com/infoline/api/HelloController.java
 
 package com.infoline.api;
 
