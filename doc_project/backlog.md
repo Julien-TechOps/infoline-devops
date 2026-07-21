@@ -52,4 +52,5 @@ Lun 20 juil (suite, fin de session) : les trois points laissés ouverts plus hau
 | 21 juil (après-midi) | Mise en forme livrable | Toutes | Montage du Word ECF (nomenclature `ECF_BDOps_Hiver2025_copiearendre_Youssefi_Julien`), collage des 3 copies, insertion des **17 PNG**, **lien Git inséré dans le document** | — | ❌ | ❌ |
 | 21 juil (soir) | Hygiène | — | `terraform destroy` après le run — ne pas laisser le cluster facturé la nuit | ❌ | — | — |
 | 21 juil (après-midi) | Contrôle croisé | Toutes | Relecture du Word par Claude.ai + test du lien Git **en navigation privée** | — | ❌ | — |
+| 22 juil (matin) | Coût réel de l'infra | — | Relever le montant **réellement facturé** sur AWS Billing → Cost Explorer (filtré 18 juin → 22 juil) et remplacer l'estimation « reconstituée de mémoire » d'`architecture.md` § Bilan financier par ce chiffre vérifié. Prévoir le délai de latence Cost Explorer (jusqu'à 24h) — à faire après la dernière activité AWS, pas juste après le dernier `destroy` | — | ❌ | — |
 | 22 juil (matin) | Relecture finale et livraison | Toutes | Dernière relecture, vérification des 3 livrables, **dépôt** (échéance 23 juil — un jour de marge) | — | ❌ | — |
