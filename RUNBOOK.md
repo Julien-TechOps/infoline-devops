@@ -314,6 +314,12 @@ curl -k -u elastic:$PW -X POST "https://localhost:5601/api/saved_objects/_import
 existant à écraser, mais l'option reste nécessaire si l'import est rejoué). Le header
 `kbn-xsrf: true` est obligatoire : Kibana rejette toute requête API sans lui. Vérifier ensuite
 dans le navigateur : *Menu → Dashboards → InfoLine — Supervision ELK*.
+
+L'import ramène aussi la recherche sauvegardée **« Logs — Reduced Columns »**
+(`@timestamp`, `log.level`, `kubernetes.pod.name`, `message` — cf. A3-Q2), mais Discover ne la
+charge pas automatiquement en arrivant sur la page : il faut l'ouvrir explicitement. *Discover
+→ bouton « Open » (à côté de « Save », en haut) → sélectionner « Logs — Reduced Columns »*.
+Sans cette étape, Discover reste sur ses colonnes par défaut malgré un import réussi.
 > Données ES en `emptyDir` : perdues à chaque `destroy` — **normal**, ces manifests se réappliquent au réveil suivant (Filebeat ré-ingère en quelques minutes).
 
 ---

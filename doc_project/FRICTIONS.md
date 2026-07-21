@@ -836,6 +836,13 @@ lieux différents (`A3-Q2_synthese.md`, `FRICTIONS.md` du 15 juil) affirmaient l
 sans qu'aucun des deux ne porte la procédure : un pointeur croisé entre synthèse et RUNBOOK
 aurait dû exister dès l'export initial.
 
+**Complément découvert juste après (même friction, même cause racine) :** l'import ramène aussi
+la recherche sauvegardée « Logs — Reduced Columns » (les 4 colonnes réduites d'A3-Q2 :
+`@timestamp`, `log.level`, `kubernetes.pod.name`, `message`), mais Discover ne la charge pas en
+arrivant sur la page — il faut l'ouvrir explicitement via *Open → Logs — Reduced Columns*. Sans
+cette étape, l'import réussit silencieusement mais Discover affiche ses colonnes par défaut,
+donnant l'impression que l'import a échoué. Ajouté au même endroit du RUNBOOK.
+
 ## CE QUI EST ACQUIS — RUN DE VALIDATION (21 juil)
 - Reconstruction complète ELK depuis zéro rejouée avec succès (ECK → ES → Filebeat → Kibana),
   RUNBOOK §4bis désormais fiable de bout en bout après correction.
