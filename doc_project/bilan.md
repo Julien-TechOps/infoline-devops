@@ -3,7 +3,7 @@
 **Auteur :** Julien Youssefi
 **Contexte :** ECF Administrateur Système DevOps (Studi, promo Conway) — sujet InfoLine
 **Période :** 18 juin → 23 juillet 2026 — 16 jours ouvrés (~112 h), phases 0 → 5
-**Statut du document :** interne (rétrospective de fin de projet) — pièce d'accompagnement de la copie
+**Statut du document :** rétrospective de fin de projet — pièce d'accompagnement de la copie
 **Date :** juillet 2026
 
 > Ce bilan raconte le projet de bout en bout : le sujet, la réponse d'architecture, ce qui est

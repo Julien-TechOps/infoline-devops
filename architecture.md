@@ -106,9 +106,8 @@ flowchart TB
 > tombe, le node de `eu-west-3b` **perd toute sortie Internet** : plus aucun `docker pull` depuis
 > ECR, donc **plus aucun nouveau déploiement** (le pipeline échoue au `rollout status`), même si
 > le pod déjà en route sur `eu-west-3b` continue de répondre en entrant (le trafic ELB → pod ne
-> passe pas par la NAT). Détail complet et corrigé de calcul :
-> `fiches-essentielles/exercice-reseau-vpc.md` (partie B). Correctif de prod identifié : une NAT
-> par AZ (§ « Pourquoi un seul NAT Gateway » ci-dessous).
+> passe pas par la NAT). Correctif de production identifié : une NAT Gateway par AZ — arbitrage
+> coût/résilience détaillé au § « Pourquoi un seul NAT Gateway » ci-dessous.
 >
 > Ce schéma n'est **pas exporté en image dans la copie** : trop large pour rester lisible sur
 > une page, il est consulté directement dans le dépôt, où GitHub le rend automatiquement. La
