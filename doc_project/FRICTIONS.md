@@ -724,8 +724,13 @@ d'une reconstitution — même quand la valeur « paraît évidente ».
 
 Points laissés ouverts, à trancher avant le collage dans le Word :
 - ~~**Anonymisation incohérente**~~ — **résolu le 20 juil** (voir ci-dessous).
-- **Double slash de l'`invoke_url`** : le transcrit affiche `…amazonaws.com//login` (stage
-  `$default` + `route_path`), normalisé à un seul slash dans la copie — écart copie/capture.
+- ~~**Double slash de l'`invoke_url`**~~ — **tranché le 21 juil : la copie affiche le double
+  slash.** Le transcrit affiche `…amazonaws.com//login` (concaténation de l'`invoke_url` du
+  stage `$default`, qui finit déjà par `/`, avec `route_path`). Arbitrage : garder la sortie
+  réelle plutôt que de la normaliser à un seul slash. Un transcrit retouché pour « faire
+  propre » est un transcrit qui ne peut plus être rejoué à l'identique devant le jury — même
+  règle que la Friction 13. L'URL à deux slashes répond d'ailleurs normalement.
+  Copie et capture sont désormais alignées, l'écart n'existe plus.
 - ~~**Deux affirmations déduites à vérifier**~~ — **vérifiées le 20 juil, les deux exactes.**
   `maxSurge: 0` est bien motivé par la **limite de pods par nœud** (plafond ENI/CNI de 4 pods
   sur `t3.micro`, erreur `Too many pods`), pas par la mémoire — source : Friction 10. Le flag
