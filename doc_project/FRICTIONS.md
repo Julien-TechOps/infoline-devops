@@ -783,3 +783,69 @@ Distinguer le risque réel du signal envoyé. Ici le risque était nul — les r
 n'existaient plus — mais l'incohérence de rédaction restait visible et coûtait en crédibilité.
 Vérifier l'état réel des ressources (`terraform.tfstate`, `aws ... get-*`) avant de traiter un
 identifiant comme sensible évite autant la panique inutile que la négligence.
+
+---
+
+# Session Mar 21 juil 2026 — Phase 5 (J3) : run de validation complet
+
+## Friction 14 — RUNBOOK §4bis : deux `port-forward` bloquants dans le même bloc de code
+
+**Symptôme :** en rejouant §4bis pour reconstruire ELK depuis zéro, `curl -k -u elastic:$PW
+https://localhost:9200/_cluster/health` échouait systématiquement (`curl: (7) Failed to
+connect to localhost port 9200`), alors que le tunnel Kibana (5601) fonctionnait.
+
+**Cause :** le bloc de code du RUNBOOK enchaînait `kubectl port-forward … 5601` (Kibana) puis
+`kubectl port-forward … 9200` (Elasticsearch) comme s'il s'agissait de commandes séquentielles
+dans un même terminal. Les deux sont **bloquantes** : la première occupe le terminal
+indéfiniment, la seconde ne s'exécute donc jamais. Aggravant : `$PW` est une variable shell,
+qui ne traverse pas les terminaux — un terminal séparé pour le tunnel ES doit aussi recalculer
+`$PW` avant de pouvoir authentifier les `curl`.
+
+**Résolution :** RUNBOOK.md §4bis réécrit avec 3 terminaux explicitement nommés (A = Kibana,
+B = Elasticsearch, C = curl/vérification), chaque `port-forward` isolé dans son propre bloc de
+code, et un avertissement en tête expliquant le symptôme observé pour qu'il soit reconnu
+immédiatement s'il se reproduit.
+
+**Leçon :** un bloc de code unique dans une doc de procédure laisse croire à une exécution
+séquentielle même quand certaines commandes sont bloquantes. Pour toute commande longue-durée
+(`port-forward`, `-w`, `logs -f`…), isoler visuellement le bloc et nommer le terminal cible,
+plutôt que de compter sur un commentaire inline facile à survoler.
+
+## Friction 15 — Réimport du dashboard Kibana jamais documenté
+
+**Symptôme :** le dashboard « InfoLine — Supervision ELK » est exporté et versionné
+(`k8s/elk/kibana-saved-objects/dashboard-infoline-supervision.ndjson`) depuis la consolidation
+du 15 juillet, décrit dans `A3-Q2_synthese.md` comme *« réimportable en quelques secondes »* —
+mais **aucune commande d'import n'existait nulle part** dans le dépôt (ni RUNBOOK, ni README
+du dossier). Un rebuild complet reconstruit l'infra mais pas le dashboard : sans la commande,
+la promesse de réimport rapide était fausse en pratique.
+
+**Résolution :** section « Réimporter le dashboard Kibana » ajoutée à RUNBOOK.md §4bis,
+avec la commande d'import via l'API Saved Objects de Kibana :
+```bash
+curl -k -u elastic:$PW -X POST "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
+  -H "kbn-xsrf: true" \
+  --form file=@k8s/elk/kibana-saved-objects/dashboard-infoline-supervision.ndjson
+```
+`overwrite=true` évite un conflit d'ID au réimport ; `kbn-xsrf: true` est obligatoire, Kibana
+rejette toute requête API sans lui. Nécessite le tunnel Kibana (terminal A) actif.
+
+**Leçon :** exporter un artefact et documenter *que* c'est réimportable ne suffit pas — sans la
+commande exacte, la fonctionnalité qu'il promet n'existe pas au moment où on en a besoin. Deux
+lieux différents (`A3-Q2_synthese.md`, `FRICTIONS.md` du 15 juil) affirmaient la réimportabilité
+sans qu'aucun des deux ne porte la procédure : un pointeur croisé entre synthèse et RUNBOOK
+aurait dû exister dès l'export initial.
+
+## CE QUI EST ACQUIS — RUN DE VALIDATION (21 juil)
+- Reconstruction complète ELK depuis zéro rejouée avec succès (ECK → ES → Filebeat → Kibana),
+  RUNBOOK §4bis désormais fiable de bout en bout après correction.
+- Pipeline CI/CD API testé sur un vrai commit no-op (2ᵉ déploiement de la journée) : rolling
+  update et garde-fou `rollout status` reconfirmés fonctionnels après reconstruction complète.
+- Deux frictions RUNBOOK trouvées et corrigées **avant** le run noté par le jury — c'est
+  exactement la valeur d'un run de validation.
+
+## POINTS DE VIGILANCE POUR LA SUITE
+- Vérifier que le rolling update du commit no-op (`HelloController.java`) est allé au bout
+  avant de considérer A2-Q3 revalidé pour ce run.
+- `terraform destroy` en fin de session — ne pas laisser tourner la nuit.
+- Coût réel AWS à relever le 22 (Cost Explorer), cf. backlog.md.

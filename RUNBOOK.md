@@ -265,18 +265,55 @@ kubectl apply -f k8s/elk/kibana.yaml
 kubectl get kibana                                        # HEALTH green, NODES 1
 kubectl get pods -l kibana.k8s.elastic.co/name=infoline-kibana   # 1/1 Running
 PW=$(kubectl get secret infoline-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
-kubectl port-forward service/infoline-kibana-kb-http 5601 # terminal dédié (bloquant)
+```
+
+> ⚠️ **3 terminaux distincts à partir d'ici.** Les deux `port-forward` ci-dessous sont
+> **bloquants** : chacun occupe le terminal qui le lance jusqu'à `Ctrl+C`. Les enchaîner dans
+> le même terminal fait que le second (ES, 9200) **ne démarre jamais** — symptôme observé :
+> `curl: (7) Failed to connect to localhost port 9200`. `$PW` étant une variable shell, elle
+> ne traverse pas les terminaux : la recalculer dans chacun où elle est utilisée (ligne 267,
+> à rejouer si besoin).
+
+```bash
+# Terminal A (dédié, bloquant) — tunnel Kibana
+kubectl port-forward service/infoline-kibana-kb-http 5601
 # Navigateur : https://localhost:5601 ; login elastic + mot de passe PW
 # Kibana : data view filebeat-* avec @timestamp, puis Discover
+```
 
-# 5. Vérification + preuve de connexion ES (port-forward + curl ; certificat auto-signé → -k)
-kubectl port-forward service/infoline-es-es-http 9200       # tunnel local, dans un terminal dédié (bloquant)
+```bash
+# Terminal B (dédié, bloquant) — tunnel Elasticsearch
+kubectl port-forward service/infoline-es-es-http 9200
+```
+
+```bash
+# Terminal C — vérification + preuve de connexion ES (certificat auto-signé → -k)
+PW=$(kubectl get secret infoline-es-es-elastic-user -o go-template='{{.data.elastic | base64decode}}')
 curl -k -u elastic:$PW https://localhost:9200/_cluster/health?pretty                 # 💾 status green
 curl -k -u elastic:$PW "https://localhost:9200/_cat/indices/filebeat-*?v"            # 💾 index filebeat, docs>0
 curl -k -u elastic:$PW "https://localhost:9200/filebeat-*/_search?q=kubernetes.pod.name:infoline-es*&size=1&pretty"  # 💾 log enrichi kubernetes.*
 ```
 > ⚠️ **Floutage** : la réponse `_search` contient l'Account ID (`cloud.account.id` + ARN `orchestrator.cluster.id`) → remplacer par `<ACCOUNT_ID>` avant toute capture.
 > ⚠️ **`kubectl get … -w`** : le flag *watch* bloque le terminal — `Ctrl+C` avant d'enchaîner (sinon les commandes suivantes ne s'exécutent pas ; cf. FRICTIONS session 13 juil).
+
+### Réimporter le dashboard Kibana (Saved Objects)
+
+Le dashboard « InfoLine — Supervision ELK » (3 panneaux, cf. A3-Q2) ne survit pas à un
+`destroy` : il vit dans l'index `.kibana`, sur le stockage `emptyDir` d'Elasticsearch. Il est
+donc **versionné** (`k8s/elk/kibana-saved-objects/dashboard-infoline-supervision.ndjson`) pour
+être réimporté en une commande plutôt que reconstruit à la main. Nécessite le tunnel Kibana
+(terminal A ci-dessus) actif :
+
+```bash
+# Terminal C (ou tout terminal libre, une fois PW connu et le tunnel Kibana actif)
+curl -k -u elastic:$PW -X POST "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
+  -H "kbn-xsrf: true" \
+  --form file=@k8s/elk/kibana-saved-objects/dashboard-infoline-supervision.ndjson
+```
+`overwrite=true` évite un conflit d'ID sur un cluster fraîchement recréé (aucun Saved Object
+existant à écraser, mais l'option reste nécessaire si l'import est rejoué). Le header
+`kbn-xsrf: true` est obligatoire : Kibana rejette toute requête API sans lui. Vérifier ensuite
+dans le navigateur : *Menu → Dashboards → InfoLine — Supervision ELK*.
 > Données ES en `emptyDir` : perdues à chaque `destroy` — **normal**, ces manifests se réappliquent au réveil suivant (Filebeat ré-ingère en quelques minutes).
 
 ---
