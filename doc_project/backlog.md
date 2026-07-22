@@ -6,7 +6,7 @@
 ✅ fait et vérifié · 🔶 en cours / partiel · ❌ pas commencé · — non applicable à cette étape
 
 ## Livrables finaux (jury)
-- [x] Lien Git de tout le code — poussé le 21 juil, à retester **en navigation privée** avant dépôt
+- [x] Lien Git de tout le code — dépôt **passé en public le 22 juil**, accès anonyme confirmé (`200` sur le dépôt et sur `architecture.md`, bloc Mermaid servi par GitHub)
 - [x] Documentation technique (`architecture.md` + schéma, `RUNBOOK.md`, READMEs de sous-dossiers)
 - [x] Copie à rendre + captures (`ECF_BDOps_Hiver2025_copiearendre_YOUSSEFI_Julien`) — **finalisée** le 21 juil, 48 pages, 18 PNG insérés ; reste le dépôt (échéance 23 juil)
 
@@ -58,7 +58,7 @@ Mer 22 juil (suite) : **contrôle final — copie ↔ dépôt, secrets, lien Git
 | 21 juil (après-midi) | Mise en forme livrable | Toutes | Montage du Word ECF (nomenclature `ECF_BDOps_Hiver2025_copiearendre_YOUSSEFI_Julien`), collage des 3 copies, **18 PNG insérés sur 28** (23 planifiés, 5 abandonnés au montage pour la lisibilité — tous restent cités par chemin), **lien Git inséré dans le document** | — | ✅ | ✅ |
 | 21 juil (soir) | Hygiène | — | `terraform destroy` après le run — ne pas laisser le cluster facturé la nuit | ✅ | — | — |
 | 21 juil (après-midi) | Contrôle croisé | Toutes | Relecture de la copie **contre le dépôt** (51 preuves, extraits de code, chiffres) : 3 correctifs committés côté dépôt, 5 côté Word — cf. « Où j'en suis ». **Fait** | — | ✅ | — |
-| 22 juil (matin) | Test du lien Git | — | Ouvrir `https://github.com/Julien-TechOps/infoline-devops` **en navigation privée** : un dépôt privé donnerait une 404 au correcteur, et le lien est le livrable n°1. **Testé sans session : `404` — dépôt encore privé.** Reste l'action : passer en public puis retester | — | 🔶 | — |
+| 22 juil (matin) | Test du lien Git | — | Ouvrir `https://github.com/Julien-TechOps/infoline-devops` **en navigation privée** : un dépôt privé donnerait une 404 au correcteur, et le lien est le livrable n°1. Testé sans session : `404` → **dépôt basculé en public**, retest anonyme `200` sur le dépôt **et** sur l'URL d'`architecture.md` citée p.4 de la copie (schéma Mermaid rendu par GitHub). **Fait** | — | ✅ | — |
 | 22 juil (matin) | Contrôle final copie ↔ dépôt | Toutes | 51 preuves citées vérifiées présentes, extraits de code et versions recoupés avec les fichiers versionnés. **Fait** | — | ✅ | — |
 | 22 juil (matin) | Scan de secrets avant passage en public | — | Arbre de travail propre ; account ID et PNG non flouté subsistent dans l'historique (`35fe8f6`, `caea250`, `cc27de4`) — **réécriture d'historique écartée**, cf. Friction 16. **Fait** | — | ✅ | — |
 | 22 juil (fait le 21, avance) | Reprise et finalisation Word | Toutes | Numérotation des figures reprise (légendes p.11 réintégrées à la séquence `SEQ`), légende de la figure 14 → `A3-consolidation_dashboard-incident-today.png`, coquilles `lambda-Login` (p.12) et espace avant deux-points (p.14). **Copie finalisée** | — | ✅ | ✅ |

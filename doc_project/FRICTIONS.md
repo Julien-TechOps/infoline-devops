@@ -917,12 +917,22 @@ masqué **avant le premier commit** — après, le seul recours est une réécri
 le coût dépasse presque toujours l'enjeu. Prolonge directement la passe d'anonymisation du
 20 juil, qui avait raisonné juste sur le risque réel mais n'avait regardé que `HEAD`.
 
-## Le lien Git est encore privé — le livrable n°1 renverrait une 404
+## Le lien Git renvoyait une 404 — livrable n°1 invisible pour le correcteur
 
 Test effectué sans session authentifiée (équivalent navigation privée) :
 `curl -o /dev/null -w '%{http_code}' https://github.com/Julien-TechOps/infoline-devops` → **404**.
-Le dépôt est toujours privé. Le lien figure en tête de la copie : en l'état, le correcteur ne voit
-rien. Bascule en public à faire **avant** le dépôt, puis retester par la même méthode.
+Le dépôt était encore privé, alors que le lien figure en tête de la copie : le correcteur n'aurait
+rien vu.
+
+**Résolu le jour même** (Settings → Danger Zone → Change repository visibility → Make public).
+Retest anonyme : **200** sur le dépôt, et **200** sur
+`/blob/main/architecture.md` — l'URL que la p.4 de la copie donne au jury pour consulter le schéma
+d'architecture, GitHub servant bien le bloc Mermaid rendu.
+
+**Leçon :** un livrable « lien » se teste comme un déploiement — depuis l'extérieur, sans les
+droits de l'auteur. Le second test compte autant que le premier : la copie ayant renoncé au PNG du
+schéma au profit du rendu GitHub, une page inaccessible n'aurait pas cassé un lien mais **supprimé
+une preuve attendue** de l'Activité 1.
 
 ## CE QUI EST ACQUIS — CONTRÔLE FINAL (22 juil)
 - Coût réel relevé et propagé (`architecture.md` § Bilan financier, `bilan.md`), avec sa capture
