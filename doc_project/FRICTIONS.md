@@ -861,3 +861,78 @@ donnant l'impression que l'import a échoué. Ajouté au même endroit du RUNBOO
   avant de considérer A2-Q3 revalidé pour ce run.
 - `terraform destroy` en fin de session — ne pas laisser tourner la nuit.
 - Coût réel AWS à relever le 22 (Cost Explorer), cf. backlog.md.
+
+---
+
+# Session Mer 22 juil 2026 — Contrôle final : coût réel, copie ↔ dépôt, secrets avant passage en public
+
+## Cost Explorer « Data unavailable » — un écran qui n'avait simplement pas été exécuté
+
+**Symptôme :** le rapport *Cost Explorer → New cost and usage report* affichait *Data
+unavailable* et un tableau vide, sur une plage 17 juin → 23 juil pourtant correcte. Lecture
+immédiate et fausse : « la facturation n'a rien enregistré ».
+
+**Résolution :** un rapport neuf ne calcule rien tant que ses paramètres n'ont pas été lancés
+(un filtre appliqué à vide suffit à le laisser inerte). La même donnée était disponible un cran
+plus haut, sans configuration : widget **Cost breakdown** de la page d'accueil *Billing and Cost
+Management*, groupé par service. Relevé : **$0,43 en juin + $10,23 en juillet ≈ $10,66** pour
+tout le projet.
+
+**Leçon :** distinguer « la source ne contient pas la donnée » de « je n'ai pas lancé la
+requête ». Vingt minutes perdues à chercher un problème de latence de facturation inexistant.
+
+## Friction 16 — l'anonymisation ne portait que sur l'arbre de travail, pas sur l'historique Git
+
+**Symptôme :** contrôle des secrets avant de passer le dépôt en public. L'arbre de travail est
+propre — aucune clé, aucun ARN, aucun ID de compte (`git grep` sur les motifs `AKIA`, `arn:aws`,
+12 chiffres : zéro résultat). Mais l'historique, lui, garde ce que les commits de masquage ont
+retiré :
+
+| Commit | Date | Ce qu'il contient encore |
+|---|---|---|
+| `35fe8f6` | 1 juil | account ID en clair dans 2 transcrits A1-Q1 (masqués ensuite par `a56e099`) |
+| `caea250` | 7 juil | account ID en dur dans `k8s/api-deployment.yaml` (retiré par `e96fac6`) |
+| `cc27de4` | 2 juil | version **non floutée** du PNG `A1-Q1_lambda-console-aws-synoptics.png` (masqué par `bd69214`) |
+
+Un `git clone` public rend ces quatre blobs lisibles, y compris l'image que la session du 21 juil
+avait explicitement décidé de masquer.
+
+**Arbitrage : ne pas réécrire l'historique.** Trois raisons, dans cet ordre :
+1. **Ce n'est pas un identifiant d'accès.** Un account ID AWS ne permet aucune authentification.
+   Aucune clé (`AKIA…`), aucun `tfstate` de production, aucun secret n'a jamais été committé —
+   le seul `tfstate` de l'historique (`terraform/s3-test/`, Phase 0) est un état **post-destroy**
+   à 0 ressource, 181 octets.
+2. **Le coût de la réécriture est certain, le bénéfice hypothétique.** Un `filter-repo` change
+   tous les SHA à partir du point de réécriture. Or la copie rendue **cite des hash de commit**
+   (`e96fac6`, `2ec034d`, `23547c5`, `0d0207f`) comme preuves, tout comme `FRICTIONS.md` et les
+   synthèses. Réécrire la veille du dépôt, c'est invalider des preuves vérifiables pour effacer
+   une donnée non secrète.
+3. **La mitigation utile est ailleurs** : supprimer les clés d'accès de l'utilisateur IAM
+   `infoline-ci` après le passage du jury, et détruire Lambda + API Gateway + ECR quand le dépôt
+   sera noté. C'est ce qui ferme réellement la surface, pas le nettoyage d'un identifiant public.
+
+**Leçon :** un masquage fait dans un commit *ultérieur* documente une intention, il n'exécute pas
+une suppression. La règle qui en découle : un identifiant qu'on ne veut pas publier doit être
+masqué **avant le premier commit** — après, le seul recours est une réécriture d'historique dont
+le coût dépasse presque toujours l'enjeu. Prolonge directement la passe d'anonymisation du
+20 juil, qui avait raisonné juste sur le risque réel mais n'avait regardé que `HEAD`.
+
+## Le lien Git est encore privé — le livrable n°1 renverrait une 404
+
+Test effectué sans session authentifiée (équivalent navigation privée) :
+`curl -o /dev/null -w '%{http_code}' https://github.com/Julien-TechOps/infoline-devops` → **404**.
+Le dépôt est toujours privé. Le lien figure en tête de la copie : en l'état, le correcteur ne voit
+rien. Bascule en public à faire **avant** le dépôt, puis retester par la même méthode.
+
+## CE QUI EST ACQUIS — CONTRÔLE FINAL (22 juil)
+- Coût réel relevé et propagé (`architecture.md` § Bilan financier, `bilan.md`), avec sa capture
+  de preuve — l'estimation « reconstituée de mémoire » a disparu de la doc.
+- Contrôle croisé copie ↔ dépôt : les **51 preuves citées existent**, et les extraits de code de
+  la copie correspondent aux fichiers versionnés (manifestes k8s, deploy.yml, angular.yml,
+  Dockerfiles, `eks.tf`/`vpc.tf`/`lambda.tf`, manifestes ELK), versions comprises (Spring Boot
+  4.1.0, Angular 22, ECK 3.4.1, stack 9.4.3).
+- Scan de secrets complet (arbre de travail + historique) : aucune clé, aucun secret exposé.
+
+## POINTS DE VIGILANCE POUR LA SUITE
+- Passer le dépôt en public, puis retester le lien en navigation privée.
+- Après notation : supprimer les clés IAM `infoline-ci`, détruire Lambda + API Gateway + ECR.

@@ -496,12 +496,12 @@ réellement vécue. Il est nommé comme tel pour ne pas être surinterprété.
 
 ## Bilan financier
 
-> ⚠️ **Méthodologie.** Les tarifs ci-dessous sont des **prix publics approximatifs** pour
-> `eu-west-3` (Paris), reconstitués de mémoire — **pas extraits d'AWS Cost Explorer**. Ils
-> consolident les chiffrages déjà donnés par composant (Lambda, NAT) et comblent le seul poste
-> jamais chiffré nulle part dans ce document : **le node group EC2 lui-même**. À revérifier sur
-> la [AWS Pricing Calculator] et, idéalement, remplacer par le montant réel de la facture AWS
-> (Billing → Cost Explorer) avant de citer un chiffre définitif dans la copie.
+> ⚠️ **Méthodologie.** Deux niveaux de lecture, à ne pas confondre :
+> les **tarifs unitaires** ci-dessous sont des **prix publics approximatifs** pour `eu-west-3`
+> (Paris), reconstitués de mémoire — ils servent à expliquer *comment* chaque poste se facture.
+> Le **montant total du projet**, lui, n'est plus une estimation : il est **relevé dans AWS
+> Billing → Cost Explorer le 22 juillet 2026** (§ « Coût réel constaté »). En cas d'écart entre
+> les deux, c'est le relevé qui fait foi.
 
 ### Coût par composant
 
@@ -509,7 +509,7 @@ réellement vécue. Il est nommé comme tel pour ne pas être surinterprété.
 |---|---|---|---|
 | **Control plane EKS** | horaire fixe, quel que soit l'usage | ≈ $0,10/h | **Aucune** — jamais gratuit chez AWS, à aucun palier |
 | **Node group — 2× `t3.micro`** (Phases 1-3) | horaire, par instance | ≈ $0,0116/h/instance → **≈ $0,023/h** pour 2 | 750 h/mois de `t3`/`t2.micro` gratuites les 12 premiers mois d'un compte neuf — **à vérifier si déjà consommée sur ce compte** |
-| **Node group — 2× `m7i-flex.large`** (Phase 4+, pour ELK) | horaire, par instance | ≈ $0,113/h/instance → **≈ $0,226/h** pour 2 | Statut Free Tier **non confirmé** pour ce type malgré le flag `free-tier-eligible` (celui-ci garantit le **droit de lancer** sur ce compte restreint — cf. Friction 11 — pas nécessairement des heures **facturées $0** ; à vérifier en Billing Console avant de conclure) |
+| **Node group — 2× `m7i-flex.large`** (Phase 4+, pour ELK) | horaire, par instance | ≈ $0,113/h/instance → **≈ $0,226/h** pour 2 **Aucune** — tranché par le relevé Cost Explorer : $3,34 d'EC2-Compute facturés en juillet. Le flag `free-tier-eligible` garantit le **droit de lancer** ce type sur ce compte restreint (cf. Friction 11), **pas** des heures facturées $0 |
 | **NAT Gateway (unique)** | horaire + Go traités | ≈ $0,059/h + $0,059/Go | Aucune |
 | **Lambda `infoline-login`** | par requête + durée d'exécution | $0,20/M requêtes | 1M requêtes + 400 000 Go-secondes **gratuites en permanence** |
 | **API Gateway HTTP API** | par requête | $1/M requêtes | 1M requêtes gratuites les **12 premiers mois** du compte |
@@ -524,24 +524,49 @@ réellement vécue. Il est nommé comme tel pour ne pas être surinterprété.
 | Phases 1-3 (`t3.micro`) | $0,10 | $0,023 | $0,059 | **≈ $0,18/h** |
 | Phase 4+ (`m7i-flex.large`, ELK) | $0,10 | $0,226 | $0,059 | **≈ $0,39/h** |
 
-### Coût réel estimé sur l'ensemble du projet
+### Coût réel constaté sur l'ensemble du projet
 
-Deux façons de le lire — c'est la deuxième qui compte, compte tenu de la discipline de
-`terraform destroy` quotidien :
+Relevé dans **AWS Billing → Cost Explorer le 22 juillet 2026**, après la dernière activité AWS du
+projet (run de validation du 21 juillet suivi du `terraform destroy`). Le projet couvre deux mois
+calendaires : juin (Phase 0 + démarrage) et juillet (Phases 1 à 5). Preuve :
+[`doc_project/captures/Bilan_cout-reel-cost-explorer.png`](doc_project/captures/Bilan_cout-reel-cost-explorer.png).
 
-- **Si l'infra tournait 24/7 pendant un mois entier** (scénario délibérément **non représentatif**,
-  juste pour donner l'ordre de grandeur évité) : ≈ $130-280/mois selon la phase.
-- **Usage réel** — EKS (control plane + node group + NAT) actif seulement pendant les sessions de
-  travail, sur un budget total de **~112 h** réparties sur 16 jours ouvrés, puis détruit chaque
-  soir/week-end : entre `112 h × $0,18` et `112 h × $0,39` → **une fourchette d'environ $20 à $44
-  pour l'intégralité du projet**, selon la part du temps passée en Phase 4+ (nœuds plus gros).
-- **Postes quasi nuls, en continu tout le projet** (jamais détruits) : Lambda + API Gateway (trafic
-  hello world, largement couvert par la franchise gratuite) + ECR (quelques images de ~92 Mo) +
-  IAM ($0) → de l'ordre de **quelques centimes à 1-2 $** au total.
+| Service | Juin 2026 | Juillet 2026 (au 22) | **Total projet** |
+|---|---|---|---|
+| EC2 – Compute (node group) | $0,01 | $3,34 | **$3,35** |
+| EKS (control plane) | $0,17 | $3,22 | **$3,39** |
+| EC2 – Other (NAT Gateway, EBS, IP publiques) | $0,23 | $3,10 | **$3,33** |
+| Elastic Load Balancing (ELB du Service `api`) | $0,00 | $0,29 | **$0,29** |
+| VPC | $0,02 | $0,23 | **$0,25** |
+| Others (ECR, CloudWatch, Lambda, API Gateway) | $0,00 | $0,06 | **$0,06** |
+| **Total** | **$0,43** | **$10,23** | **≈ $10,66** |
 
-**Total estimé du projet : de l'ordre de $20 à $45**, avant déduction d'éventuels crédits Free
-Tier sur la part EC2 (non confirmés — cf. tableau) et hors frais de transfert de données sortant
-(négligeables pour un trafic hello world).
+**Montant réellement débité : $0.** Le compte est sur un *free plan* dont les crédits couvrent
+cette consommation. Les $10,66 sont donc le **coût consommé** — c'est ce chiffre qui est cité ici,
+parce que c'est lui qui décrit le coût de l'architecture, indépendamment du plan tarifaire du
+compte.
+
+**Trois enseignements, issus de l'écart avec l'estimation initiale ($20 à $45) :**
+
+- **La durée réelle d'existence du cluster était trois fois plus courte que le temps de travail.**
+  $3,39 de control plane ÷ $0,10/h ≈ **34 h d'EKS allumé**, contre les ~112 h de projet qui
+  servaient d'hypothèse. Le modèle de coût par composant était juste ; c'est l'hypothèse « EKS up
+  = temps de travail » qui était fausse — une large part des sessions s'est passée hors cluster
+  (build Docker local, Angular, rédaction).
+- **Les postes liés à la vie du cluster (EKS + node group + NAT/EBS) pèsent $10,07 sur $10,66,
+  soit 94 % de la facture.** La thèse défendue plus bas — le levier de coût, c'est la durée
+  pendant laquelle EKS existe — est ici confirmée par la facture, pas seulement par le
+  raisonnement.
+- **Le serverless et le stockage d'images sont bien négligeables** : Lambda + API Gateway + ECR +
+  CloudWatch cumulent **$0,06** sur tout le projet, ce qui valide l'estimation « quelques
+  centimes » faite par composant.
+
+*Réserve :* Cost Explorer accuse jusqu'à 24 h de latence ; le relevé du 22 peut ne pas inclure les
+toutes dernières heures du 21 juillet. L'ordre de grandeur n'en est pas affecté.
+
+Pour mémoire, le scénario évité : **si l'infra avait tourné 24/7 pendant un mois entier**, elle
+aurait coûté ≈ $130-280 selon la phase. C'est la discipline de `terraform destroy` qui explique
+l'écart avec les $10,66 constatés.
 
 ### Nuance honnête pour l'oral
 
@@ -552,8 +577,5 @@ NAT unique vs double (§ « Pourquoi un seul NAT Gateway » : quelques dollars d
 projet) ou le choix Lambda vs serveur permanent (quasi gratuit dans les deux cas à ce volume).
 **Le vrai levier de coût sur cette architecture, c'est la durée pendant laquelle EKS existe**, pas
 tel ou tel paramètre fin à l'intérieur — ce que confirme d'ailleurs le tableau `RUNBOOK.md` §0
-(seul `terraform/eks/` est marqué destroy quotidien **obligatoire**).
-
-**Prochaine étape recommandée avant de citer un chiffre définitif dans la copie :** consulter
-*AWS Billing → Cost Explorer* pour remplacer cette estimation par le montant **réellement
-facturé** — la seule source qui rend ce chiffre incontestable devant le jury.
+(seul `terraform/eks/` est marqué destroy quotidien **obligatoire**) — et que chiffre désormais le
+relevé Cost Explorer ci-dessus : 94 % de la dépense suit l'existence du cluster.

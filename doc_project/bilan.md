@@ -62,7 +62,10 @@ Trois contraintes ont façonné les choix (détail et « pourquoi » dans
 
 - **Budget** : discipline de `terraform destroy` quotidien (EKS facturé à l'heure), NAT Gateway
   unique, Lambda serverless (facturé à l'usage), Kibana en `port-forward` (pas de second ELB).
-  Chiffrage consolidé par composant : `architecture.md` § « Bilan financier ».
+  **Coût réel du projet entier : $10,66** (relevé AWS Cost Explorer du 22 juillet 2026, dont 94 %
+  sur les postes liés à la vie du cluster) — preuve :
+  [`captures/Bilan_cout-reel-cost-explorer.png`](captures/Bilan_cout-reel-cost-explorer.png).
+  Chiffrage par composant et lecture détaillée : `architecture.md` § « Bilan financier ».
 - **Compte AWS Free Tier** : refus au lancement des types d'instance non éligibles — contrainte
   qui a directement piloté le dimensionnement des nœuds (cf. §3).
 - **Timebox** (~112 h, aucune marge) : hello world assumés, aucun sur-développement applicatif,
